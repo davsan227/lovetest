@@ -29,7 +29,7 @@ function love.update(dt)
             stage = Stage(input)   -- create a new stage, resets everything
         else
             -- trigger player explosion
-            stage.player_circle:explode(stage.area)
+            stage.player_circle:explode(stage.area.game_objects)
             stage.slowmo_timer = stage.slowmo_duration
         end
     end

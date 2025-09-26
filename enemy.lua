@@ -49,28 +49,27 @@ function Enemy:update(dt)
     if self.y + self.radius > h then self.y = h - self.radius; self.vy = -self.vy end
 end
 
-function Enemy:explode(area)
+function Enemy:explode()
     if self.exploding then return end
-
     self.exploding = true
     self.explosion_timer = 0
     self.explosion_radius = self.radius
 
     -- score
-    if area.stage then
-        area.stage.score = area.stage.score + 10
+    if self.area.stage then
+        self.area.stage.score = self.area.stage.score + 10
     end
 
     -- delayed chain reaction
-    for _, obj in ipairs(area.game_objects) do
-        if not obj.dead and obj ~= self and obj ~= area.stage.player_circle then
+    for _, obj in ipairs(self.area.game_objects) do
+        if not obj.dead and obj ~= self and obj ~= self.area.stage.player_circle then
             local dx, dy = obj.x - self.x, obj.y - self.y
             local dist = math.sqrt(dx*dx + dy*dy)
-            if dist < 100 then  -- same chain distance as original
+            if dist < 100 then
                 local delay = dist / 250
-                area.stage.timer:after(delay, function()
+                self.area.stage.timer:after(delay, function()
                     if obj.explode then
-                        obj:explode(area)
+                        obj:explode()  -- pass no area needed, objects list can be accessed inside explode()
                     else
                         obj.dead = true
                     end

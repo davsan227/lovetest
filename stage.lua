@@ -37,25 +37,44 @@ function Stage:update(dt)
     if self.slowmo_timer > 0 then
         effective_dt = dt * self.slowmo_factor
         self.slowmo_timer = self.slowmo_timer - dt
-        if self.slowmo_timer < 0 then self.slowmo_timer = 0 end
+        if self.slowmo_timer < 0 then
+            self.slowmo_timer = 0
+        end
     end
 
-    if self.game_over then return end
+    if self.game_over then
+        return
+    end
 
-    -- update timers and area
+    -- update timers and area first
     self.timer:update(dt)
-    self.area:update(effective_dt)
+    self.area:update(effective_dt) -- all explosions, including chain reactions, are updated here
 
-    -- === Player collision check ===
-    local px, py, pr = self.player_circle.x, self.player_circle.y, self.player_circle.hitbox_radius or self.player_circle.radius
+    -- collision check
     for _, c in ipairs(self.area.game_objects) do
         if c ~= self.player_circle and not c.dead then
-            local dx, dy = c.x - px, c.y - py
-            if math.sqrt(dx*dx + dy*dy) <= pr + c.radius then
-                self.game_over = true
-                break
+            local dx, dy = c.x - self.player_circle.x, c.y - self.player_circle.y
+            local rsum = (self.player_circle.hitbox_radius or self.player_circle.radius) + (c.radius or 0)
+
+            if dx * dx + dy * dy <= rsum * rsum then
+                self.player_circle:hit() -- handle explosions and invulnerability
+                break -- only first collision per frame
             end
         end
+    end
+
+    -- Check if there are any active explosions
+    local active_explosions = false
+    for _, obj in ipairs(self.area.game_objects) do
+        if obj.exploding then
+            active_explosions = true
+            break
+        end
+    end
+
+    -- Game over only if no explosions left AND no active explosions
+    if self.explosions <= 0 and not active_explosions then
+        self.game_over = true
     end
 
     -- === Explosion recharge ===
@@ -70,13 +89,21 @@ function Stage:update(dt)
         self.spawn_timer = self.spawn_timer - self.spawn_interval
 
         local w, h = love.graphics.getDimensions()
-        local edge = love.math.random(1,4)
+        local edge = love.math.random(1, 4)
         local x, y
 
-        if edge == 1 then x = math.random(0, w); y = -20
-        elseif edge == 2 then x = math.random(0, w); y = h + 20
-        elseif edge == 3 then x = -20; y = math.random(0, h)
-        else x = w + 20; y = math.random(0, h)
+        if edge == 1 then
+            x = math.random(0, w);
+            y = -20
+        elseif edge == 2 then
+            x = math.random(0, w);
+            y = h + 20
+        elseif edge == 3 then
+            x = -20;
+            y = math.random(0, h)
+        else
+            x = w + 20;
+            y = math.random(0, h)
         end
 
         -- aim toward player
@@ -99,12 +126,11 @@ function Stage:update(dt)
     end
 end
 
-
 function Stage:draw()
     -- draw score and explosions
-    love.graphics.setColor(1,1,1)
-    love.graphics.print("Score: "..self.score, 10, 10)
-    love.graphics.print("Explosions: "..self.explosions, 10, 30)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.print("Score: " .. self.score, 10, 10)
+    love.graphics.print("Ships: " .. self.explosions, 10, 30)
 
     -- draw all game objects (player + enemies)
     self.area:draw()
@@ -112,16 +138,16 @@ function Stage:draw()
     -- optional: show explosion cooldown bar above player
     local player = self.player_circle
     if player.exploded then
-        local w = 40  -- width of bar
-        local h = 5   -- height of bar
-        local x = player.x - w/2
+        local w = 40 -- width of bar
+        local h = 5 -- height of bar
+        local x = player.x - w / 2
         local y = player.y - player.radius - 10
-        local t = player.explode_timer / 3  -- 3 sec cooldown
-        love.graphics.setColor(0.5,0.5,0.5)
+        local t = player.explode_timer / 3 -- 3 sec cooldown
+        love.graphics.setColor(0.5, 0.5, 0.5)
         love.graphics.rectangle("fill", x, y, w, h)
-        love.graphics.setColor(0,0.5,1)
+        love.graphics.setColor(0, 0.5, 1)
         love.graphics.rectangle("fill", x, y, w * t, h)
-        love.graphics.setColor(1,1,1)
+        love.graphics.setColor(1, 1, 1)
     end
 end
 
