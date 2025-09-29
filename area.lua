@@ -1,3 +1,5 @@
+local Classic = require "objects.classic"
+
 local Area = Classic:extend()
 
 function Area:new(stage)

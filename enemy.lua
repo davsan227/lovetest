@@ -1,13 +1,13 @@
 -- enemy.lua
 local Classic = require "objects.classic"
-local Timer   = require "objects/hump/timer"
+local Timer = require "objects/hump/timer"
 
 local Enemy = Classic:extend()
 
 function Enemy:new(area, x, y)
     self.area = area
     self.x, self.y = x, y
-    self.radius = 20          -- same as original
+    self.radius = 20 -- same as original
     self.dead = false
 
     -- random velocity
@@ -43,14 +43,28 @@ function Enemy:update(dt)
     self.y = self.y + self.vy * dt
 
     local w, h = love.graphics.getDimensions()
-    if self.x - self.radius < 0 then self.x = self.radius; self.vx = -self.vx end
-    if self.x + self.radius > w then self.x = w - self.radius; self.vx = -self.vx end
-    if self.y - self.radius < 0 then self.y = self.radius; self.vy = -self.vy end
-    if self.y + self.radius > h then self.y = h - self.radius; self.vy = -self.vy end
+    if self.x - self.radius < 0 then
+        self.x = self.radius;
+        self.vx = -self.vx
+    end
+    if self.x + self.radius > w then
+        self.x = w - self.radius;
+        self.vx = -self.vx
+    end
+    if self.y - self.radius < 0 then
+        self.y = self.radius;
+        self.vy = -self.vy
+    end
+    if self.y + self.radius > h then
+        self.y = h - self.radius;
+        self.vy = -self.vy
+    end
 end
 
 function Enemy:explode()
-    if self.exploding then return end
+    if self.exploding then
+        return
+    end
     self.exploding = true
     self.explosion_timer = 0
     self.explosion_radius = self.radius
@@ -64,12 +78,12 @@ function Enemy:explode()
     for _, obj in ipairs(self.area.game_objects) do
         if not obj.dead and obj ~= self and obj ~= self.area.stage.player_circle then
             local dx, dy = obj.x - self.x, obj.y - self.y
-            local dist = math.sqrt(dx*dx + dy*dy)
+            local dist = math.sqrt(dx * dx + dy * dy)
             if dist < 100 then
                 local delay = dist / 250
                 self.area.stage.timer:after(delay, function()
                     if obj.explode then
-                        obj:explode()  -- pass no area needed, objects list can be accessed inside explode()
+                        obj:explode() -- pass no area needed, objects list can be accessed inside explode()
                     else
                         obj.dead = true
                     end
@@ -85,7 +99,7 @@ function Enemy:draw()
         local alpha = 1 - t
         love.graphics.setColor(1, 0, 0, alpha)
         love.graphics.circle("fill", self.x, self.y, self.explosion_radius)
-        love.graphics.setColor(1,1,1)
+        love.graphics.setColor(1, 1, 1)
         return
     end
 

@@ -1,6 +1,7 @@
 local Enemy = require "enemy"
 local Player = require "player"
 local Area = require "area"
+local Classic = require "objects.classic"
 Timer = require "objects/hump/timer"
 
 local Stage = Classic:extend()

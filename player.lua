@@ -63,23 +63,35 @@ end
 
 function Player:move(dt)
     local dx, dy = 0, 0
-    if self.input:down("left_key") then dx = dx - 1 end
-    if self.input:down("right_key") then dx = dx + 1 end
-    if self.input:down("up_key") then dy = dy - 1 end
-    if self.input:down("down_key") then dy = dy + 1 end
+    if self.input:down("left_key") then
+        dx = dx - 1
+    end
+    if self.input:down("right_key") then
+        dx = dx + 1
+    end
+    if self.input:down("up_key") then
+        dy = dy - 1
+    end
+    if self.input:down("down_key") then
+        dy = dy + 1
+    end
 
-    local len = math.sqrt(dx*dx + dy*dy)
+    local len = math.sqrt(dx * dx + dy * dy)
     if len > 0 then
-        dx, dy = dx/len, dy/len
-        self.x, self.y = self.x + dx*self.speed*dt, self.y + dy*self.speed*dt
+        dx, dy = dx / len, dy / len
+        self.x, self.y = self.x + dx * self.speed * dt, self.y + dy * self.speed * dt
     end
 end
 
 -- called when player triggers explosion manually
 -- called when player triggers explosion manually
 function Player:explode(objects)
-    if self.exploding then return end  -- prevent starting another explosion during active explosion
-    if self.exploded then return end   -- already exploded (cooldown)
+    if self.exploding then
+        return
+    end -- prevent starting another explosion during active explosion
+    if self.exploded then
+        return
+    end -- already exploded (cooldown)
 
     if self.area.stage.explosions <= 0 then
         return
@@ -99,20 +111,24 @@ function Player:explode(objects)
     for _, obj in ipairs(objects) do
         if not obj.dead and obj ~= self then
             local dx, dy = obj.x - self.x, obj.y - self.y
-            if math.sqrt(dx*dx + dy*dy) < 100 then
+            if math.sqrt(dx * dx + dy * dy) < 100 then
                 if obj.explode then
-                    obj:explode(objects)  -- pass the same list of objects
+                    obj:explode(objects) -- pass the same list of objects
                 else
                     obj.dead = true
                 end
             end
         end
     end
+
+    return true
 end
 
 -- called when player collides with an enemy
 function Player:hit()
-    if self.invulnerable then return end
+    if self.invulnerable then
+        return
+    end
 
     if self.area.stage.explosions > 0 then
         self.area.stage.explosions = self.area.stage.explosions - 1
@@ -139,7 +155,9 @@ function Player:draw()
     local r, g, b, a = 0, 0.5, 1, 1
     if self.invulnerable then
         local blink = math.floor(love.timer.getTime() * 10) % 2
-        if blink == 1 then a = 0.3 end
+        if blink == 1 then
+            a = 0.3
+        end
     end
 
     if self.exploded then
