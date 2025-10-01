@@ -1,4 +1,4 @@
-local Input = require "objects/boipushy/Input"
+local Input = require "objects.boipushy.Input"
 local Stage = require "stage"
 local Leaderboard = require("leaderboard")
 local lb = Leaderboard
@@ -6,14 +6,10 @@ local lb = Leaderboard
 local input
 local playerName = ""
 local enteringName = false
+local stage
+local showLeaderboard = false -- new flag
 
 function love.load()
-    if jit then
-        print("LuaJIT version:", jit.version)
-        print("Lua version:", _VERSION)
-        print(jit.arch)
-    end
-
     love.window.setTitle("Exploding Circles")
     love.graphics.setBackgroundColor(0.1, 0.1, 0.1)
 
@@ -47,10 +43,12 @@ function love.keypressed(key)
         if key == "backspace" then
             playerName = playerName:sub(1, -2)
         elseif key == "return" or key == "kpenter" then
-            -- Submit score after entering name
+            -- Submit name and switch to leaderboard
             lb:submit(playerName ~= "" and playerName or "Player", math.floor(stage.score))
             lb:getTop()
             enteringName = false
+            showLeaderboard = true
+            love.keyboard.setTextInput(false)
         end
     end
 end
@@ -58,17 +56,25 @@ end
 function love.update(dt)
     stage:update(dt)
 
-    -- Handle explosions
+    -- Handle explosions / clicks
     if input:pressed("explode") then
         if stage.game_over then
-            -- Restart game
-            stage = Stage(input)
-            playerName = ""
-            enteringName = false
+            if enteringName then
+                -- Submit score via mouse click
+                lb:submit(playerName ~= "" and playerName or "Player", math.floor(stage.score))
+                lb:getTop()
+                enteringName = false
+                showLeaderboard = true
+                love.keyboard.setTextInput(false)
+            elseif showLeaderboard then
+                -- Restart game
+                stage = Stage(input)
+                playerName = ""
+                showLeaderboard = false
+            end
         else
-            -- Trigger player explosion
-            local area = stage.area
-            local exploded_now = stage.player_circle:explode(area.game_objects)
+            -- Trigger explosion during gameplay
+            local exploded_now = stage.player_circle:explode(stage.area.game_objects)
             if exploded_now then
                 stage.slowmo_timer = stage.slowmo_duration
             end
@@ -78,6 +84,7 @@ function love.update(dt)
     -- When game over, ask for name if not already submitted
     if stage.game_over and not stage.leaderboard_handled then
         enteringName = true
+        love.keyboard.setTextInput(true)
         stage.leaderboard_handled = true
     end
 end
@@ -85,19 +92,20 @@ end
 function love.draw()
     stage:draw()
 
-    -- Game over text
     if stage.game_over then
-        love.graphics.setColor(1, 1, 1)
-        love.graphics.printf("GAME OVER", 0, love.graphics.getHeight() / 2 - 40, love.graphics.getWidth(), "center")
+        love.graphics.setColor(1,1,1)
 
-        -- Player name input
         if enteringName then
-            love.graphics.printf("Enter Name: " .. playerName, 0, love.graphics.getHeight() / 2,
+            love.graphics.printf("GAME OVER - Enter Name:", 0, love.graphics.getHeight() / 2 - 40,
+                love.graphics.getWidth(), "center")
+            love.graphics.printf(playerName, 0, love.graphics.getHeight() / 2,
+                love.graphics.getWidth(), "center")
+        elseif showLeaderboard then
+            love.graphics.printf("Leaderboard (Click to Restart)", 0, 50, love.graphics.getWidth(), "center")
+            lb:draw(200, 100)
+        else
+            love.graphics.printf("GAME OVER", 0, love.graphics.getHeight() / 2 - 40,
                 love.graphics.getWidth(), "center")
         end
-
-        -- Draw leaderboard
-        lb:draw(200, 100)
     end
-
 end
