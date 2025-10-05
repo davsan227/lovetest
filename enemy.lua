@@ -1,6 +1,6 @@
 -- enemy.lua
-local Classic = require "objects.classic"
-local Timer = require "objects.hump.timer"
+local Classic = require "libs.classic"
+local Timer = require "libs.hump.timer"
 
 local Enemy = Classic:extend()
 

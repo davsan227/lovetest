@@ -1,5 +1,5 @@
 -- player.lua
-local Classic = require "objects.classic"
+local Classic = require "libs.classic"
 
 local Player = Classic:extend()
 

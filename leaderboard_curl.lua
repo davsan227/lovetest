@@ -1,4 +1,4 @@
-local json = require("objects.dkjson.dkjson")
+local json = require("libs.dkjson.dkjson")
 
 local Leaderboard = {}
 Leaderboard.__index = Leaderboard

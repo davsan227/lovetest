@@ -1,4 +1,4 @@
-local Classic = require "objects.classic"
+local Classic = require "libs.classic"
 
 local Area = Classic:extend()
 

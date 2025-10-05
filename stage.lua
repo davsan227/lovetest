@@ -1,123 +1,142 @@
 local Enemy = require "enemy"
 local Player = require "player"
 local Area = require "area"
-local Classic = require "objects.classic"
-Timer = require "objects.hump.timer"
+local Classic = require "libs.classic"
+local Timer = require "libs.hump.timer"
+local bump = require "libs.bump.bump"
 
 local Stage = Classic:extend()
 
 function Stage:new(input)
+    -- Timer & world
     self.timer = Timer()
+    self.world = bump.newWorld(50)
     self.area = Area(self)
     self.score = 0
     self.game_over = false
 
-    -- player circle
+    -- Player
     self.player_circle = Player(self.area, 400, 300, input)
     self.area:add(self.player_circle)
+    local r = self.player_circle.hitbox_radius or self.player_circle.radius
+    self.world:add(self.player_circle, self.player_circle.x - r, self.player_circle.y - r, r*2, r*2)
 
-    -- slow-motion
+    -- Slow motion
     self.slowmo_timer = 0
     self.slowmo_duration = 1.5
     self.slowmo_factor = 0.3
 
-    -- spawn enemies
-    self.spawn_timer = 0 -- counts time since last spawn
-    self.spawn_interval = 0.2 -- start spawning every 2 seconds
-    self.enemy_speed_min = 50 -- base speed
+    -- Enemy spawn
+    self.spawn_timer = 0
+    self.spawn_interval = 0.2
+    self.enemy_speed_min = 50
     self.enemy_speed_max = 100
-    self.difficulty_timer = 0 -- counts time for difficulty increase
+    self.difficulty_timer = 0
 
-    self.max_explosions = 3 -- starting explosions
-    self.explosions = 3 -- current available explosions
-    self.last_score_checkpoint = 0 -- track score for bonus
+    -- Explosions
+    self.max_explosions = 3
+    self.explosions = 3
+    self.last_score_checkpoint = 0
+
+    -- Track active explosions
+    self.activeExplosions = {}
 end
 
+-- === Update Helpers ===
+
 function Stage:update(dt)
-    local effective_dt = dt
-    if self.slowmo_timer > 0 then
-        effective_dt = dt * self.slowmo_factor
-        self.slowmo_timer = self.slowmo_timer - dt
-        if self.slowmo_timer < 0 then
-            self.slowmo_timer = 0
-        end
-    end
+    local effective_dt = self:getSlowMoDT(dt)
+    if self.game_over then return end
 
-    if self.game_over then
-        return
-    end
-
-    -- update timers and area first
     self.timer:update(dt)
-    self.area:update(effective_dt) -- all explosions, including chain reactions, are updated here
+    self.area:update(effective_dt)
 
-    -- collision check
-    for _, c in ipairs(self.area.game_objects) do
-        if c ~= self.player_circle and not c.dead then
-            local dx, dy = c.x - self.player_circle.x, c.y - self.player_circle.y
-            local rsum = (self.player_circle.hitbox_radius or self.player_circle.radius) + (c.radius or 0)
+    self:updateCollisions()
+    self:updateActiveExplosions()
+    self:checkGameOver()
+    self:rechargeExplosions()
+    self:spawnEnemies(dt)
+    self:increaseDifficulty(dt)
+end
 
-            if dx * dx + dy * dy <= rsum * rsum then
-                self.player_circle:hit() -- handle explosions and invulnerability
-                break -- only first collision per frame
-            end
+function Stage:getSlowMoDT(dt)
+    if self.slowmo_timer > 0 then
+        local effective_dt = dt * self.slowmo_factor
+        self.slowmo_timer = self.slowmo_timer - dt
+        if self.slowmo_timer < 0 then self.slowmo_timer = 0 end
+        return effective_dt
+    end
+    return dt
+end
+
+function Stage:updateCollisions()
+    local r = self.player_circle.hitbox_radius or self.player_circle.radius
+    local actualX, actualY, cols, len = self.world:move(
+        self.player_circle,
+        self.player_circle.x,
+        self.player_circle.y
+    )
+
+    for i = 1, len do
+        local col = cols[i]
+        if col.other.isEnemy then
+            self.player_circle:hit()
         end
     end
+end
 
-    -- Check if there are any active explosions
-    local active_explosions = false
+function Stage:updateActiveExplosions()
+    self.activeExplosions = {}
     for _, obj in ipairs(self.area.game_objects) do
         if obj.exploding then
-            active_explosions = true
-            break
+            table.insert(self.activeExplosions, obj)
         end
     end
+end
 
-    -- Game over only if no explosions left AND no active explosions
-    if self.explosions <= 0 and not active_explosions then
+function Stage:checkGameOver()
+    if self.explosions <= 0 and #self.activeExplosions == 0 then
         self.game_over = true
     end
+end
 
-    -- === Explosion recharge ===
+function Stage:rechargeExplosions()
     if self.score - self.last_score_checkpoint >= 1000 then
         self.last_score_checkpoint = self.score
         self.explosions = math.min(self.explosions + 1, self.max_explosions)
     end
+end
 
-    -- === Spawn enemies gradually from outside screen ===
+function Stage:spawnEnemies(dt)
     self.spawn_timer = self.spawn_timer + dt
-    if self.spawn_timer >= self.spawn_interval then
-        self.spawn_timer = self.spawn_timer - self.spawn_interval
+    if self.spawn_timer < self.spawn_interval then return end
+    self.spawn_timer = self.spawn_timer - self.spawn_interval
 
-        local w, h = love.graphics.getDimensions()
-        local edge = love.math.random(1, 4)
-        local x, y
+    local w, h = love.graphics.getDimensions()
+    local x, y = self:getSpawnPosition(w, h)
 
-        if edge == 1 then
-            x = math.random(0, w);
-            y = -20
-        elseif edge == 2 then
-            x = math.random(0, w);
-            y = h + 20
-        elseif edge == 3 then
-            x = -20;
-            y = math.random(0, h)
-        else
-            x = w + 20;
-            y = math.random(0, h)
-        end
+    local targetX, targetY = self.player_circle.x, self.player_circle.y
+    local angle = math.atan2(targetY - y, targetX - x)
+    local speed = love.math.random(self.enemy_speed_min, self.enemy_speed_max)
 
-        -- aim toward player
-        local targetX, targetY = self.player_circle.x, self.player_circle.y
-        local angle = math.atan2(targetY - y, targetX - x)
-        local speed = love.math.random(self.enemy_speed_min, self.enemy_speed_max)
-        local enemy = Enemy(self.area, x, y)
-        enemy.vx = math.cos(angle) * speed
-        enemy.vy = math.sin(angle) * speed
-        self.area:add(enemy)
-    end
+    local enemy = Enemy(self.area, x, y)
+    enemy.vx = math.cos(angle) * speed
+    enemy.vy = math.sin(angle) * speed
+    self.area:add(enemy)
 
-    -- === Increase difficulty over time ===
+    local r = enemy.radius
+    self.world:add(enemy, x - r, y - r, r*2, r*2)
+end
+
+function Stage:getSpawnPosition(w, h)
+    local edge = love.math.random(1, 4)
+    if edge == 1 then return math.random(0, w), -20 end
+    if edge == 2 then return math.random(0, w), h + 20 end
+    if edge == 3 then return -20, math.random(0, h) end
+    return w + 20, math.random(0, h)
+end
+
+function Stage:increaseDifficulty(dt)
     self.difficulty_timer = self.difficulty_timer + dt
     if self.difficulty_timer >= 10 then
         self.difficulty_timer = 0
@@ -127,23 +146,19 @@ function Stage:update(dt)
     end
 end
 
+-- === Draw ===
 function Stage:draw()
-    -- draw score and explosions
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("Score: " .. self.score, 10, 10)
     love.graphics.print("Ships: " .. self.explosions, 10, 30)
 
-    -- draw all game objects (player + enemies)
     self.area:draw()
 
-    -- optional: show explosion cooldown bar above player
     local player = self.player_circle
     if player.exploded then
-        local w = 40 -- width of bar
-        local h = 5 -- height of bar
-        local x = player.x - w / 2
-        local y = player.y - player.radius - 10
-        local t = player.explode_timer / 3 -- 3 sec cooldown
+        local w, h = 40, 5
+        local x, y = player.x - w/2, player.y - player.radius - 10
+        local t = player.explode_timer / 3
         love.graphics.setColor(0.5, 0.5, 0.5)
         love.graphics.rectangle("fill", x, y, w, h)
         love.graphics.setColor(0, 0.5, 1)

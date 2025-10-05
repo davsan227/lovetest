@@ -1,5 +1,5 @@
 local https = require("https")
-local json = require("objects.dkjson.dkjson")
+local json = require("libs.dkjson.dkjson")
 
 local Leaderboard = {}
 Leaderboard.__index = Leaderboard
@@ -7,7 +7,6 @@ Leaderboard.__index = Leaderboard
 Leaderboard.url = "https://ecgame-d742b-default-rtdb.asia-southeast1.firebasedatabase.app/leaderboard.json"
 Leaderboard.scores = {}
 
--- Fetch top 10 scores
 -- Fetch top 10 scores
 function Leaderboard:getTop()
     -- Some libraries return the status code as a separate value.
