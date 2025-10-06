@@ -24,9 +24,9 @@ function Stage:new(input)
 
     -- spawn enemies
     self.spawn_timer = 0
-    self.spawn_interval = 0.2
+    self.spawn_interval = 1.25
     self.enemy_speed_min = 50
-    self.enemy_speed_max = 100
+    self.enemy_speed_max = 70
     self.difficulty_timer = 0
 
     self.max_explosions = 3
@@ -35,6 +35,7 @@ function Stage:new(input)
 end
 
 function Stage:update(dt)
+    local w, h = love.graphics.getDimensions()
     local effective_dt = dt
     if self.slowmo_timer > 0 then
         effective_dt = dt * self.slowmo_factor
@@ -66,7 +67,9 @@ function Stage:update(dt)
     for i = #self.area.game_objects, 1, -1 do
         local obj = self.area.game_objects[i]
         if obj.dead then
-            if obj.destroy then obj:destroy() end
+            if obj.destroy then
+                obj:destroy()
+            end
             table.remove(self.area.game_objects, i)
         end
     end
@@ -95,18 +98,37 @@ function Stage:update(dt)
     if self.spawn_timer >= self.spawn_interval then
         self.spawn_timer = self.spawn_timer - self.spawn_interval
 
-        local w, h = love.graphics.getDimensions()
         local edge = love.math.random(1, 4)
         local x, y
-        if edge == 1 then x = math.random(0, w); y = -20
-        elseif edge == 2 then x = math.random(0, w); y = h + 20
-        elseif edge == 3 then x = -20; y = math.random(0, h)
-        else x = w + 20; y = math.random(0, h) end
+        if edge == 1 then
+            x = math.random(0, w);
+            y = -20
+        elseif edge == 2 then
+            x = math.random(0, w);
+            y = h + 20
+        elseif edge == 3 then
+            x = -20;
+            y = math.random(0, h)
+        else
+            x = w + 20;
+            y = math.random(0, h)
+        end
 
         local count = math.max(2, love.math.random(2, 3))
-        Formations.line(self.area, count, x, y, self.player_circle.x, self.player_circle.y, 50, self.enemy_speed_min, self.enemy_speed_max)
+        Formations.line(self.area, count, x, y, self.player_circle.x, self.player_circle.y, 50, self.enemy_speed_min,
+            self.enemy_speed_max)
 
         print("Enemies alive:", #self.area.game_objects)
+
+        -- Occasionally spawn a shooter enemy
+        if love.math.random() < 0.3 then -- 30% chance
+            local ShooterEnemy = require "enemyshooter"
+            local shooter_x = math.random(50, w - 50) -- somewhere horizontally
+            local shooter_y = 20 -- just inside top of screen
+            local shooter = ShooterEnemy(self.area, shooter_x, shooter_y)
+            self.area:add(shooter)
+            print("Shooter enemy spawned at:", shooter_x, shooter_y)
+        end
     end
 
     -- === Increase difficulty over time ===
