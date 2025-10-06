@@ -3,6 +3,7 @@ local Player = require "player"
 local Area = require "area"
 local Classic = require "libs.classic"
 Timer = require "libs.hump.timer"
+local Formations = require "formations"
 
 local Stage = Classic:extend()
 
@@ -97,28 +98,15 @@ function Stage:update(dt)
         local w, h = love.graphics.getDimensions()
         local edge = love.math.random(1, 4)
         local x, y
+        if edge == 1 then x = math.random(0, w); y = -20
+        elseif edge == 2 then x = math.random(0, w); y = h + 20
+        elseif edge == 3 then x = -20; y = math.random(0, h)
+        else x = w + 20; y = math.random(0, h) end
 
-        if edge == 1 then
-            x = math.random(0, w)
-            y = -20
-        elseif edge == 2 then
-            x = math.random(0, w)
-            y = h + 20
-        elseif edge == 3 then
-            x = -20
-            y = math.random(0, h)
-        else
-            x = w + 20
-            y = math.random(0, h)
-        end
+        local count = math.max(2, love.math.random(2, 3))
+        Formations.line(self.area, count, x, y, self.player_circle.x, self.player_circle.y, 50, self.enemy_speed_min, self.enemy_speed_max)
 
-        local targetX, targetY = self.player_circle.x, self.player_circle.y
-        local angle = math.atan2(targetY - y, targetX - x)
-        local speed = love.math.random(self.enemy_speed_min, self.enemy_speed_max)
-        local enemy = Enemy(self.area, x, y)
-        enemy.vx = math.cos(angle) * speed
-        enemy.vy = math.sin(angle) * speed
-        self.area:add(enemy)
+        print("Enemies alive:", #self.area.game_objects)
     end
 
     -- === Increase difficulty over time ===

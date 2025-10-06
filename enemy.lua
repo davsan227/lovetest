@@ -13,11 +13,9 @@ function Enemy:new(area, x, y)
     self.dead = false
     self.shape = HC.circle(self.x, self.y, self.hitbox_radius)
 
-    -- random velocity
-    local angle = love.math.random() * 2 * math.pi
-    local speed = love.math.random(50, 100)
-    self.vx = math.cos(angle) * speed
-    self.vy = math.sin(angle) * speed
+    -- default velocity (can be overwritten later)
+    self.vx = 0
+    self.vy = 0
 
     -- explosion
     self.exploding = false
@@ -45,25 +43,15 @@ function Enemy:update(dt)
     self.x = self.x + self.vx * dt
     self.y = self.y + self.vy * dt
 
+    -- Remove if out of bounds (no rebound)
     local w, h = love.graphics.getDimensions()
-    if self.x - self.radius < 0 then
-        self.x = self.radius;
-        self.vx = -self.vx
+    local buffer = 200 -- big enough so enemies spawn far outside
+    if self.x < -buffer or self.x > w + buffer or self.y < -buffer or self.y > h + buffer then
+        self.dead = true
+        print("Enemy died immediately at:", self.x, self.y) 
     end
-    if self.x + self.radius > w then
-        self.x = w - self.radius;
-        self.vx = -self.vx
-    end
-    if self.y - self.radius < 0 then
-        self.y = self.radius;
-        self.vy = -self.vy
-    end
-    if self.y + self.radius > h then
-        self.y = h - self.radius;
-        self.vy = -self.vy
-    end
-    
-    --move the hitbox
+
+    -- move the hitbox
     if self.shape then
         self.shape:moveTo(self.x, self.y)
     end
@@ -99,6 +87,7 @@ function Enemy:explode()
             end
         end
     end
+
 end
 
 function Enemy:destroy()
@@ -118,7 +107,7 @@ function Enemy:draw()
         return
     end
 
-     -- Calculate darkness based on speed
+    -- Calculate darkness based on speed
     local speed = math.sqrt(self.vx * self.vx + self.vy * self.vy)
     local min_speed, max_speed = 50, 200 -- adjust max_speed if needed
     local darkness = (speed - min_speed) / (max_speed - min_speed)
