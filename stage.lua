@@ -22,15 +22,15 @@ function Stage:new(input)
     self.slowmo_factor = 0.3
 
     -- spawn enemies
-    self.spawn_timer = 0 -- counts time since last spawn
-    self.spawn_interval = 0.2 -- start spawning every 2 seconds
-    self.enemy_speed_min = 50 -- base speed
+    self.spawn_timer = 0
+    self.spawn_interval = 0.2
+    self.enemy_speed_min = 50
     self.enemy_speed_max = 100
-    self.difficulty_timer = 0 -- counts time for difficulty increase
+    self.difficulty_timer = 0
 
-    self.max_explosions = 3 -- starting explosions
-    self.explosions = 3 -- current available explosions
-    self.last_score_checkpoint = 0 -- track score for bonus
+    self.max_explosions = 3
+    self.explosions = 3
+    self.last_score_checkpoint = 0
 end
 
 function Stage:update(dt)
@@ -47,20 +47,26 @@ function Stage:update(dt)
         return
     end
 
-    -- update timers and area first
     self.timer:update(dt)
-    self.area:update(effective_dt) -- all explosions, including chain reactions, are updated here
+    self.area:update(effective_dt)
 
-    -- collision check
+    -- Collision check using HC shapes managed by objects
+    local player_shape = self.player_circle.shape
     for _, c in ipairs(self.area.game_objects) do
-        if c ~= self.player_circle and not c.dead then
-            local dx, dy = c.x - self.player_circle.x, c.y - self.player_circle.y
-            local rsum = (self.player_circle.hitbox_radius or self.player_circle.radius) + (c.radius or 0)
-
-            if dx * dx + dy * dy <= rsum * rsum then
-                self.player_circle:hit() -- handle explosions and invulnerability
-                break -- only first collision per frame
+        if c ~= self.player_circle and not c.dead and c.shape then
+            if player_shape:collidesWith(c.shape) then
+                self.player_circle:hit()
+                break
             end
+        end
+    end
+
+    -- Remove dead objects and clean up their shapes
+    for i = #self.area.game_objects, 1, -1 do
+        local obj = self.area.game_objects[i]
+        if obj.dead then
+            if obj.destroy then obj:destroy() end
+            table.remove(self.area.game_objects, i)
         end
     end
 
@@ -73,13 +79,12 @@ function Stage:update(dt)
         end
     end
 
-    -- Game over only if no explosions left AND no active explosions
     if self.explosions <= 0 and not active_explosions then
         self.game_over = true
     end
 
     -- === Explosion recharge ===
-    if self.score - self.last_score_checkpoint >= 1000 then
+    if self.score - self.last_score_checkpoint >= 2000 then
         self.last_score_checkpoint = self.score
         self.explosions = math.min(self.explosions + 1, self.max_explosions)
     end
@@ -94,20 +99,19 @@ function Stage:update(dt)
         local x, y
 
         if edge == 1 then
-            x = math.random(0, w);
+            x = math.random(0, w)
             y = -20
         elseif edge == 2 then
-            x = math.random(0, w);
+            x = math.random(0, w)
             y = h + 20
         elseif edge == 3 then
-            x = -20;
+            x = -20
             y = math.random(0, h)
         else
-            x = w + 20;
+            x = w + 20
             y = math.random(0, h)
         end
 
-        -- aim toward player
         local targetX, targetY = self.player_circle.x, self.player_circle.y
         local angle = math.atan2(targetY - y, targetX - x)
         local speed = love.math.random(self.enemy_speed_min, self.enemy_speed_max)
@@ -128,22 +132,19 @@ function Stage:update(dt)
 end
 
 function Stage:draw()
-    -- draw score and explosions
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("Score: " .. self.score, 10, 10)
     love.graphics.print("Ships: " .. self.explosions, 10, 30)
 
-    -- draw all game objects (player + enemies)
     self.area:draw()
 
-    -- optional: show explosion cooldown bar above player
     local player = self.player_circle
     if player.exploded then
-        local w = 40 -- width of bar
-        local h = 5 -- height of bar
+        local w = 40
+        local h = 5
         local x = player.x - w / 2
         local y = player.y - player.radius - 10
-        local t = player.explode_timer / 3 -- 3 sec cooldown
+        local t = player.explode_timer / 3
         love.graphics.setColor(0.5, 0.5, 0.5)
         love.graphics.rectangle("fill", x, y, w, h)
         love.graphics.setColor(0, 0.5, 1)

@@ -1,6 +1,7 @@
 -- enemy.lua
 local Classic = require "libs.classic"
 local Timer = require "libs.hump.timer"
+local HC = require "libs.HC"
 
 local Enemy = Classic:extend()
 
@@ -8,7 +9,9 @@ function Enemy:new(area, x, y)
     self.area = area
     self.x, self.y = x, y
     self.radius = 20 -- same as original
+    self.hitbox_radius = self.radius * 0.75
     self.dead = false
+    self.shape = HC.circle(self.x, self.y, self.hitbox_radius)
 
     -- random velocity
     local angle = love.math.random() * 2 * math.pi
@@ -59,6 +62,11 @@ function Enemy:update(dt)
         self.y = h - self.radius;
         self.vy = -self.vy
     end
+    
+    --move the hitbox
+    if self.shape then
+        self.shape:moveTo(self.x, self.y)
+    end
 end
 
 function Enemy:explode()
@@ -93,6 +101,13 @@ function Enemy:explode()
     end
 end
 
+function Enemy:destroy()
+    if self.shape then
+        HC.remove(self.shape)
+        self.shape = nil
+    end
+end
+
 function Enemy:draw()
     if self.exploding then
         local t = self.explosion_timer / self.explosion_duration
@@ -103,9 +118,17 @@ function Enemy:draw()
         return
     end
 
-    love.graphics.setColor(1, 0, 0)
+     -- Calculate darkness based on speed
+    local speed = math.sqrt(self.vx * self.vx + self.vy * self.vy)
+    local min_speed, max_speed = 50, 200 -- adjust max_speed if needed
+    local darkness = (speed - min_speed) / (max_speed - min_speed)
+    darkness = math.max(0, math.min(darkness, 1)) -- clamp between 0 and 1
+
+    -- Stronger red: keep red at 1, reduce green/blue as speed increases
+    love.graphics.setColor(1, 0.3 * (1 - darkness), 0.3 * (1 - darkness))
     love.graphics.circle("fill", self.x, self.y, self.radius)
     love.graphics.setColor(1, 1, 1)
+
 end
 
 return Enemy

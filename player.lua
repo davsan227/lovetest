@@ -1,5 +1,7 @@
 -- player.lua
 local Classic = require "libs.classic"
+    local HC = require "libs.HC"
+
 
 local Player = Classic:extend()
 
@@ -8,7 +10,9 @@ function Player:new(area, x, y, input)
     self.x, self.y = x, y
     self.radius = 15
     self.hitbox_radius = self.radius * 0.50
+    self.shape = HC.circle(self.x, self.y, self.hitbox_radius or self.radius)
     self.dead = false
+    
 
     self.input = input
     self.speed = 200
@@ -59,6 +63,17 @@ function Player:update(dt)
             self.invul_timer = 0
         end
     end
+
+    if self.shape then
+        self.shape:moveTo(self.x, self.y)
+    end
+end
+
+function Player:destroy()
+    if self.shape then
+        HC.remove(self.shape)
+        self.shape = nil
+    end
 end
 
 function Player:move(dt)
@@ -83,7 +98,6 @@ function Player:move(dt)
     end
 end
 
--- called when player triggers explosion manually
 -- called when player triggers explosion manually
 function Player:explode(objects)
     if self.exploding then

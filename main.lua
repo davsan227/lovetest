@@ -10,6 +10,7 @@ local stage
 local showLeaderboard = false
 local leaderboard_handled = false
 
+
 function love.load()
     love.window.setTitle("Exploding Circles")
     love.graphics.setBackgroundColor(0.1, 0.1, 0.1)
@@ -65,7 +66,7 @@ function love.update(dt)
     end
 
     -- 2. Restart game if leaderboard is showing and player clicks
-    if showLeaderboard and input:pressed("explode") then
+    if showLeaderboard and input:released("explode") then
         stage = Stage(input)
         playerName = ""
         showLeaderboard = false
