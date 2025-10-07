@@ -28,6 +28,7 @@ function Stage:new(input)
     self.enemy_speed_min = 50
     self.enemy_speed_max = 70
     self.difficulty_timer = 0
+    self.formations = Formations(self.area)
 
     self.max_explosions = 3
     self.explosions = 3
@@ -115,16 +116,15 @@ function Stage:update(dt)
         end
 
         local count = math.max(2, love.math.random(2, 3))
-        Formations.line(self.area, count, x, y, self.player_circle.x, self.player_circle.y, 50, self.enemy_speed_min,
-            self.enemy_speed_max)
+        self.formations:line(count, x, y, self.player_circle.x, self.player_circle.y, 50, self.enemy_speed_min, self.enemy_speed_max)
 
         print("Enemies alive:", #self.area.game_objects)
 
         -- Occasionally spawn a shooter enemy
-        if love.math.random() < 0.3 then -- 30% chance
+        if love.math.random() < 0.4 then -- 30% chance
             local ShooterEnemy = require "enemyshooter"
             local shooter_x = math.random(50, w - 50) -- somewhere horizontally
-            local shooter_y = 20 -- just inside top of screen
+            local shooter_y = math.random(50, h - 50) -- somewhere horizontally
             local shooter = ShooterEnemy(self.area, shooter_x, shooter_y)
             self.area:add(shooter)
             print("Shooter enemy spawned at:", shooter_x, shooter_y)
