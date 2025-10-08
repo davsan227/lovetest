@@ -1,9 +1,10 @@
-local Enemy = require "enemy"
+-- stage.lua
 local Player = require "player"
 local Area = require "area"
 local Classic = require "libs.classic"
 Timer = require "libs.hump.timer"
 local Formations = require "formations"
+local Spawner = require "spawner"
 
 local Stage = Classic:extend()
 
@@ -24,26 +25,32 @@ function Stage:new(input)
 
     -- spawn enemies
     self.spawn_timer = 0
-    self.spawn_interval = 1.25
+    self.spawn_interval = 1.25 -- Timer for line formations
     self.enemy_speed_min = 50
     self.enemy_speed_max = 70
     self.difficulty_timer = 0
     self.formations = Formations(self.area)
+    self.spawner = Spawner(self.area)
 
     self.max_explosions = 3
     self.explosions = 3
     self.last_score_checkpoint = 0
+
+    self.time_since_stage_start = 0
+    
+    -- === Shooter Spawning Variables ===
+    self.shooter_max = 4                      -- Maximum number of shooters allowed
+    self.shooter_cooldown = 5                 -- Seconds between shooter *attempts*
+    self.shooter_timer = self.shooter_cooldown -- Dedicated timer for shooters
+    self.first_shooter_delay = 5              -- Delay before first shooter can spawn
+    self.first_shooter_spawned = false        -- Flag to handle the initial delay
 end
 
 function Stage:update(dt)
-    local w, h = love.graphics.getDimensions()
     local effective_dt = dt
     if self.slowmo_timer > 0 then
         effective_dt = dt * self.slowmo_factor
-        self.slowmo_timer = self.slowmo_timer - dt
-        if self.slowmo_timer < 0 then
-            self.slowmo_timer = 0
-        end
+        self.slowmo_timer = math.max(0, self.slowmo_timer - dt)
     end
 
     if self.game_over then
@@ -53,18 +60,16 @@ function Stage:update(dt)
     self.timer:update(dt)
     self.area:update(effective_dt)
 
-    -- Collision check using HC shapes managed by objects
+    -- Collision check (omitted for brevity)
     local player_shape = self.player_circle.shape
     for _, c in ipairs(self.area.game_objects) do
-        if c ~= self.player_circle and not c.dead and c.shape then
-            if player_shape:collidesWith(c.shape) then
-                self.player_circle:hit()
-                break
-            end
+        if c ~= self.player_circle and not c.dead and c.shape and player_shape:collidesWith(c.shape) then
+            self.player_circle:hit()
+            break
         end
     end
 
-    -- Remove dead objects and clean up their shapes
+    -- Remove dead objects (omitted for brevity)
     for i = #self.area.game_objects, 1, -1 do
         local obj = self.area.game_objects[i]
         if obj.dead then
@@ -75,7 +80,7 @@ function Stage:update(dt)
         end
     end
 
-    -- Check if there are any active explosions
+    -- Check for active explosions (omitted for brevity)
     local active_explosions = false
     for _, obj in ipairs(self.area.game_objects) do
         if obj.exploding then
@@ -83,62 +88,54 @@ function Stage:update(dt)
             break
         end
     end
-
     if self.explosions <= 0 and not active_explosions then
         self.game_over = true
     end
 
-    -- === Explosion recharge ===
+    -- Explosion recharge (omitted for brevity)
     if self.score - self.last_score_checkpoint >= 2000 then
         self.last_score_checkpoint = self.score
         self.explosions = math.min(self.explosions + 1, self.max_explosions)
     end
 
-    -- === Spawn enemies gradually from outside screen ===
+    -- Update game timer
+    self.time_since_stage_start = self.time_since_stage_start + dt
+
+    -- ===================================
+    -- === 1. Shooter Spawning Logic ===
+    -- ===================================
+    
+    -- Only start checking after the initial delay
+    if self.time_since_stage_start >= self.first_shooter_delay then
+        self.shooter_timer = self.shooter_timer + dt
+        
+        -- Check if cooldown is ready
+        if self.shooter_timer >= self.shooter_cooldown then
+            -- Attempt to spawn. The Spawner checks the max limit.
+            local spawned = self.spawner:spawnShooter(self.shooter_max)
+            
+            -- If a shooter was successfully spawned (i.e., the limit wasn't reached), reset the timer.
+            if spawned then
+                self.shooter_timer = 0
+            end
+        end
+    end
+
+
+    -- ===================================
+    -- === 2. Line Formation Spawning Logic ===
+    -- ===================================
+    
     self.spawn_timer = self.spawn_timer + dt
+    
     if self.spawn_timer >= self.spawn_interval then
         self.spawn_timer = self.spawn_timer - self.spawn_interval
 
-        local edge = love.math.random(1, 4)
-        local x, y
-        if edge == 1 then
-            x = math.random(0, w);
-            y = -20
-        elseif edge == 2 then
-            x = math.random(0, w);
-            y = h + 20
-        elseif edge == 3 then
-            x = -20;
-            y = math.random(0, h)
-        else
-            x = w + 20;
-            y = math.random(0, h)
-        end
-
-        local count = math.max(2, love.math.random(2, 3))
-        self.formations:line(count, x, y, self.player_circle.x, self.player_circle.y, 50, self.enemy_speed_min, self.enemy_speed_max)
-
-        print("Enemies alive:", #self.area.game_objects)
-
-        -- Occasionally spawn a shooter enemy
-        if love.math.random() < 0.4 then -- 30% chance
-            local ShooterEnemy = require "enemyshooter"
-            local shooter_x = math.random(50, w - 50) -- somewhere horizontally
-            local shooter_y = math.random(50, h - 50) -- somewhere horizontally
-            local shooter = ShooterEnemy(self.area, shooter_x, shooter_y)
-            self.area:add(shooter)
-            print("Shooter enemy spawned at:", shooter_x, shooter_y)
-        end
+        -- Spawn a line formation targeting the player
+        self.spawner:spawnLineFormation(self.player_circle.x, self.player_circle.y, 50, self.enemy_speed_min,
+            self.enemy_speed_max)
     end
 
-    -- === Increase difficulty over time ===
-    self.difficulty_timer = self.difficulty_timer + dt
-    if self.difficulty_timer >= 10 then
-        self.difficulty_timer = 0
-        self.spawn_interval = math.max(0.3, self.spawn_interval - 0.1)
-        self.enemy_speed_min = self.enemy_speed_min + 5
-        self.enemy_speed_max = self.enemy_speed_max + 5
-    end
 end
 
 function Stage:draw()

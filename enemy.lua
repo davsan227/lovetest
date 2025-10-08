@@ -8,8 +8,8 @@ local Enemy = Classic:extend()
 function Enemy:new(area, x, y)
     self.area = area
     self.x, self.y = x, y
-    self.radius = 20 -- same as original
-    self.hitbox_radius = self.radius * 0.75
+    self.radius = 20 -- visible size
+    self.hitbox_radius = self.radius * 0.75 -- collision size
     self.dead = false
     self.shape = HC.circle(self.x, self.y, self.hitbox_radius)
 
@@ -27,7 +27,7 @@ function Enemy:new(area, x, y)
 end
 
 function Enemy:update(dt)
-    -- handle explosion
+    -- handle explosion animation
     if self.exploding then
         self.explosion_timer = self.explosion_timer + dt
         local t = self.explosion_timer / self.explosion_duration
@@ -43,12 +43,11 @@ function Enemy:update(dt)
     self.x = self.x + self.vx * dt
     self.y = self.y + self.vy * dt
 
-    -- Remove if out of bounds (no rebound)
+    -- Remove if out of bounds
     local w, h = love.graphics.getDimensions()
-    local buffer = 200 -- big enough so enemies spawn far outside
+    local buffer = 200
     if self.x < -buffer or self.x > w + buffer or self.y < -buffer or self.y > h + buffer then
         self.dead = true
-        print("Enemy died immediately at:", self.x, self.y) 
     end
 
     -- move the hitbox
@@ -57,20 +56,52 @@ function Enemy:update(dt)
     end
 end
 
-function Enemy:explode()
+-- Explosion with chain reaction threshold
+-- chainThreshold: minimum number of simultaneous nearby explosions required to trigger
+function Enemy:explode(chainThreshold)
+    chainThreshold = chainThreshold or 1
     if self.exploding then
         return
     end
+
+    -- Count nearby exploding objects
+    local nearbyExplosions = 0
+    for _, obj in ipairs(self.area.game_objects) do
+        if obj ~= self and obj.exploding then
+            local dx, dy = obj.x - self.x, obj.y - self.y
+            local dist = math.sqrt(dx * dx + dy * dy)
+            if dist < 100 then
+                nearbyExplosions = nearbyExplosions + 1
+            end
+        end
+    end
+
+    chainThreshold = tonumber(chainThreshold) or 1
+    if nearbyExplosions < chainThreshold then
+        return
+    end
+
+    -- Trigger explosion
     self.exploding = true
     self.explosion_timer = 0
     self.explosion_radius = self.radius
 
-    -- score
+    -- add score
     if self.area.stage then
-        self.area.stage.score = self.area.stage.score + 10
+        -- This should be the only place the score is added!
+        
+        -- Default score
+        local score_to_add = 10 
+        
+        -- Check if it's a shooter to add the bonus
+        if self.isShooter then
+            score_to_add = score_to_add + 1800
+        end
+
+        self.area.stage.score = self.area.stage.score + score_to_add
     end
 
-    -- delayed chain reaction
+    -- delayed chain reaction for others
     for _, obj in ipairs(self.area.game_objects) do
         if not obj.dead and obj ~= self and obj ~= self.area.stage.player_circle then
             local dx, dy = obj.x - self.x, obj.y - self.y
@@ -79,7 +110,7 @@ function Enemy:explode()
                 local delay = dist / 250
                 self.area.stage.timer:after(delay, function()
                     if obj.explode then
-                        obj:explode() -- pass no area needed, objects list can be accessed inside explode()
+                        obj:explode(chainThreshold)
                     else
                         obj.dead = true
                     end
@@ -87,7 +118,6 @@ function Enemy:explode()
             end
         end
     end
-
 end
 
 function Enemy:destroy()
@@ -99,6 +129,7 @@ end
 
 function Enemy:draw()
     if self.exploding then
+        -- Keep all the explosion drawing code as is
         local t = self.explosion_timer / self.explosion_duration
         local alpha = 1 - t
         love.graphics.setColor(1, 0, 0, alpha)
@@ -107,17 +138,19 @@ function Enemy:draw()
         return
     end
 
-    -- Calculate darkness based on speed
-    local speed = math.sqrt(self.vx * self.vx + self.vy * self.vy)
-    local min_speed, max_speed = 50, 200 -- adjust max_speed if needed
-    local darkness = (speed - min_speed) / (max_speed - min_speed)
-    darkness = math.max(0, math.min(darkness, 1)) -- clamp between 0 and 1
+    -- *** NEW / SIMPLIFIED COLOR LOGIC ***
 
-    -- Stronger red: keep red at 1, reduce green/blue as speed increases
-    love.graphics.setColor(1, 0.3 * (1 - darkness), 0.3 * (1 - darkness))
+    -- Check for a custom color property (used by ShooterEnemy)
+    if self.custom_color then
+        love.graphics.setColor(self.custom_color[1], self.custom_color[2], self.custom_color[3], 1)
+    else
+        -- Default fixed color for generic enemies (REPLACES THE DARKNESS CODE)
+        -- Example: A simple, fixed red color
+        love.graphics.setColor(1, 0.3, 0.3, 1) 
+    end
+
     love.graphics.circle("fill", self.x, self.y, self.radius)
     love.graphics.setColor(1, 1, 1)
-
 end
 
 return Enemy

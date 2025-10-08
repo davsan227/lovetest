@@ -9,7 +9,7 @@ end
 
 function Formations:line(count, startX, startY, targetX, targetY, spacing, speedMin, speedMax)
     count = math.max(2, count)
-    print("Spawning formation with count:", count)
+   
     
     spacing = spacing or 100
     if spacing < 1 then spacing = 100 end
