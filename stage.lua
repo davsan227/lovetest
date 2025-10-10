@@ -32,18 +32,20 @@ function Stage:new(input)
     self.formations = Formations(self.area)
     self.spawner = Spawner(self.area)
 
-    self.max_explosions = 5
-    self.explosions = 3
+    self.max_explosions = 1000
+    self.explosions = 100
     self.last_score_checkpoint = 0
 
     self.time_since_stage_start = 0
-    
+
     -- === Shooter Spawning Variables ===
-    self.shooter_max = 4                      -- Maximum number of shooters allowed
-    self.shooter_cooldown = 5                 -- Seconds between shooter *attempts*
+    self.shooter_max = 4 -- Maximum number of shooters allowed
+    self.shooter_cooldown = 5 -- Seconds between shooter *attempts*
     self.shooter_timer = self.shooter_cooldown -- Dedicated timer for shooters
-    self.first_shooter_delay = 5              -- Delay before first shooter can spawn
-    self.first_shooter_spawned = false        -- Flag to handle the initial delay
+    self.first_shooter_delay = 5 -- Delay before first shooter can spawn
+    self.first_shooter_spawned = false -- Flag to handle the initial delay
+    self.shooter_death_count = 0
+    self.spawnShooters = true
 end
 
 function Stage:update(dt)
@@ -104,17 +106,17 @@ function Stage:update(dt)
     -- ===================================
     -- === 1. Shooter Spawning Logic ===
     -- ===================================
-    
+
     -- Only start checking after the initial delay
     if self.time_since_stage_start >= self.first_shooter_delay then
         self.shooter_timer = self.shooter_timer + dt
-        
+
         -- Check if cooldown is ready
-        if self.shooter_timer >= self.shooter_cooldown then
+        if self.shooter_timer >= self.shooter_cooldown and self.spawnShooters == true then
+            self.spawnShooters = true
             -- Attempt to spawn. The Spawner checks the max limit.
             local spawned = self.spawner:spawnShooterWithWarning(self.shooter_max)
 
-            
             -- If a shooter was successfully spawned (i.e., the limit wasn't reached), reset the timer.
             if spawned then
                 self.shooter_timer = 0
@@ -122,13 +124,18 @@ function Stage:update(dt)
         end
     end
 
+    -- 1 metaball joins
+    if  self.shooter_death_count >= 4 then
+        self.spawnShooters = false
+    --     self.spawner:spawnMetaballWithWarning(1)
+    end
 
     -- ===================================
     -- === 2. Line Formation Spawning Logic ===
     -- ===================================
-    
+
     self.spawn_timer = self.spawn_timer + dt
-    
+
     if self.spawn_timer >= self.spawn_interval then
         self.spawn_timer = self.spawn_timer - self.spawn_interval
 

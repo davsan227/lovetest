@@ -2,11 +2,12 @@ local Classic = require "libs.classic"
 
 local Metaball = Classic:extend()
 
-function Metaball:new(x, y)
+function Metaball:new(area, x, y)
     self.x, self.y = x, y
     self.core = {x = x, y = y, r = 60}
     self.balls = {}
     self.timer = 0
+    self.isMetaball = true
 
     -- orbiters
     for i = 1, 3 do
