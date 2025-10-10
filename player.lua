@@ -31,14 +31,25 @@ function Player:new(area, x, y, input)
     self.invul_timer = 0
 end
 
+function Player:delayLifeExtraction(delay)
+    if self.invulnerable or self.hit_pending then
+        return
+    end
+
+    self.hit_pending = true
+    self.hit_delay = delay or 0.15 -- <--- initialized here
+end
+
+
 function Player:update(dt)
     if self.area.stage.game_over then
         return
     end
 
+    -- 1. Movement
     self:move(dt)
 
-    -- handle explosion effect
+    -- 2. Explosion / exploded
     if self.exploded then
         self.explode_timer = self.explode_timer + dt
         if self.explode_timer >= 3 then
@@ -55,26 +66,38 @@ function Player:update(dt)
         end
     end
 
-    -- invulnerability countdown
+    -- 3. Process delayed hit
+    if self.hit_pending then
+        self.hit_delay = self.hit_delay - dt
+        if self.hit_delay <= 0 then
+            if self.area.stage.explosions > 0 then
+                self.area.stage.explosions = self.area.stage.explosions - 1
+                self.invulnerable = true
+                self.invul_timer = self.invul_duration
+                self.exploding, self.explosion_timer, self.explosion_radius = true, 0, self.radius
+            else
+                self.area.stage.game_over = true
+            end
+
+            self.hit_pending = false
+            self.hit_delay = nil
+        end
+    end
+
+    -- 4. Invulnerability
     if self.invulnerable then
         self.invul_timer = self.invul_timer - dt
         if self.invul_timer <= 0 then
             self.invulnerable = false
-            self.invul_timer = 0
         end
     end
 
+    -- 5. Update shape position
     if self.shape then
         self.shape:moveTo(self.x, self.y)
     end
 end
 
-function Player:destroy()
-    if self.shape then
-        HC.remove(self.shape)
-        self.shape = nil
-    end
-end
 
 function Player:move(dt)
     local dx, dy = 0, 0
@@ -144,16 +167,10 @@ function Player:hit()
         return
     end
 
-    if self.area.stage.explosions > 0 then
-        self.area.stage.explosions = self.area.stage.explosions - 1
-        self.invulnerable = true
-        self.invul_timer = self.invul_duration
-        -- optional: small visual explosion on hit
-        self.exploding, self.explosion_timer, self.explosion_radius = true, 0, self.radius
-    else
-        self.area.stage.game_over = true
-    end
+    -- Queue a delayed hit instead of applying it immediately
+    self:delayLifeExtraction()  -- wait 0.3 seconds before applying life/explosion deduction
 end
+
 
 function Player:draw()
     -- draw explosion if exploding

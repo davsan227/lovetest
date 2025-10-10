@@ -34,6 +34,14 @@ function Bullet:update(dt)
         player:hit()
         self.dead = true
     end
+
+    -- 2. If player is exploding, bullet also dies
+        if player.exploding or player.exploded then
+            -- Optional: add bullet explosion effect here
+            self.dead = true
+        end
+
+
 end
 
 function Bullet:draw()

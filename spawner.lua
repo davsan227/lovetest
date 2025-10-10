@@ -2,6 +2,7 @@
 local Classic = require "libs.classic"
 local Formations = require "formations"
 local ShooterEnemy = require "enemyshooter"
+local WarningMarker = require "warning_marker"
 
 local w, h = love.graphics.getDimensions() -- global for this file
 
@@ -31,25 +32,22 @@ function Spawner:spawnLineFormation(targetX, targetY, speedMin, speedMax)
 end
 
 -- Spawn a shooter: Checks max limit and returns true if a shooter was added.
-function Spawner:spawnShooter(maxShooters)
+function Spawner:spawnShooterWithWarning(maxShooters)
     maxShooters = maxShooters or 4
 
-    -- Count current active shooters
-    local currentShooters = 0
+    -- Count current active shooters and queued warnings
+    local currentCount = 0
     for _, obj in ipairs(self.area.game_objects) do
-        -- Ensure obj exists and is the correct class
-        if obj.isShooter and not obj.dead then
-            currentShooters = currentShooters + 1
+        if (obj.isShooter and not obj.dead) or obj.isWarningMarker then
+            currentCount = currentCount + 1
         end
     end
-    -- The print statement for counting active shooters is removed from the loop.
 
-    -- === THE LIMIT CHECK ===
-    if currentShooters >= maxShooters then 
-        return false -- Indicate NO spawn happened
+    if currentCount >= maxShooters then
+        return false -- cannot spawn another one
     end
 
-    -- Spawn away from player
+    -- Determine spawn position (away from player)
     local player = self.area.stage.player_circle
     local margin = 100
     local x, y
@@ -57,20 +55,25 @@ function Spawner:spawnShooter(maxShooters)
         local angle = love.math.random() * 2 * math.pi
         x = player.x + math.cos(angle) * margin
         y = player.y + math.sin(angle) * margin
-        -- Clamp to screen bounds
-        x = math.max(50, math.min(w - 50, x))
-        y = math.max(50, math.min(h - 50, y))
+        x = math.max(50, math.min(love.graphics.getWidth() - 50, x))
+        y = math.max(50, math.min(love.graphics.getHeight() - 50, y))
     else
-        x = math.random(50, w - 50)
-        y = math.random(50, h - 50)
+        x = love.math.random(50, love.graphics.getWidth() - 50)
+        y = love.math.random(50, love.graphics.getHeight() - 50)
     end
 
-    -- Add the shooter
-    local shooter = ShooterEnemy(self.area, x, y)
-    self.area:add(shooter)
+    -- Create the warning marker
+    local marker = WarningMarker(self.area, x, y, function(area, mx, my)
+        local shooter = ShooterEnemy(area, mx, my)
+        area:add(shooter)
+    end)
 
-    -- print("Shooter spawned at:", x, y, "| Active shooters:", currentShooters + 1)
-    return true -- Indicate a spawn DID happen
+    marker.isWarningMarker = true -- mark as warning so we count it
+
+    self.area:add(marker)
+    return true
 end
+
+
 
 return Spawner

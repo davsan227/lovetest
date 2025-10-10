@@ -32,7 +32,7 @@ function Stage:new(input)
     self.formations = Formations(self.area)
     self.spawner = Spawner(self.area)
 
-    self.max_explosions = 3
+    self.max_explosions = 5
     self.explosions = 3
     self.last_score_checkpoint = 0
 
@@ -112,7 +112,8 @@ function Stage:update(dt)
         -- Check if cooldown is ready
         if self.shooter_timer >= self.shooter_cooldown then
             -- Attempt to spawn. The Spawner checks the max limit.
-            local spawned = self.spawner:spawnShooter(self.shooter_max)
+            local spawned = self.spawner:spawnShooterWithWarning(self.shooter_max)
+
             
             -- If a shooter was successfully spawned (i.e., the limit wasn't reached), reset the timer.
             if spawned then
