@@ -5,7 +5,6 @@ local ShooterEnemy = require "enemyshooter"
 local WarningMarker = require "warning_marker"
 local Metaball = require "metaball"
 
-local w, h = love.graphics.getDimensions() -- global for this file
 
 local Spawner = Classic:extend()
 
@@ -17,6 +16,7 @@ end
 
 -- Spawn a line formation
 function Spawner:spawnLineFormation(targetX, targetY, speedMin, speedMax)
+    local w, h = love.graphics.getDimensions() 
     local edge = love.math.random(1, 4)
     local x, y
     if edge == 1 then
@@ -35,6 +35,7 @@ end
 
 -- Spawn a shooter: Checks max limit and returns true if a shooter was added.
 function Spawner:spawnShooterWithWarning(maxEnemynumber)
+   
     maxEnemynumber = maxEnemynumber or 4
 
     -- Count current active shooters and queued warnings
@@ -76,9 +77,9 @@ function Spawner:spawnShooterWithWarning(maxEnemynumber)
     return true
 end
 
--- Spawn a shooter: Checks max limit and returns true if a shooter was added.
-function Spawner:spawnMetaballWithWarning(maxEnemynumber)
-
+-- Spawn a metaball: Checks max limit and returns true if a shooter was added.
+function Spawner:spawnMetaballWithWarning(maxEnemynumber, spawnMetaballWithWarningMCenter)
+    local w, h = love.graphics.getDimensions() 
     maxEnemynumber = maxEnemynumber or 2
 
     -- Count current active metaballs and queued warnings
@@ -94,23 +95,29 @@ function Spawner:spawnMetaballWithWarning(maxEnemynumber)
     end
 
     -- Determine spawn position (away from player)
-    local player = self.area.stage.player_circle
-    local margin = 100
     local x, y
-    if player then
-        local angle = love.math.random() * 2 * math.pi
-        x = player.x + math.cos(angle) * margin
-        y = player.y + math.sin(angle) * margin
-        x = math.max(50, math.min(love.graphics.getWidth() - 50, x))
-        y = math.max(50, math.min(love.graphics.getHeight() - 50, y))
+    if spawnMetaballWithWarningMCenter == true then
+        x = w / 2
+        y = h / 2
     else
-        x = love.math.random(50, love.graphics.getWidth() - 50)
-        y = love.math.random(50, love.graphics.getHeight() - 50)
+        local player = self.area.stage.player_circle
+        local margin = 100
+
+        if player then
+            local angle = love.math.random() * 2 * math.pi
+            x = player.x + math.cos(angle) * margin
+            y = player.y + math.sin(angle) * margin
+            x = math.max(50, math.min(love.graphics.getWidth() - 50, x))
+            y = math.max(50, math.min(love.graphics.getHeight() - 50, y))
+        else
+            x = love.math.random(50, love.graphics.getWidth() - 50)
+            y = love.math.random(50, love.graphics.getHeight() - 50)
+        end
     end
 
     -- Create the warning marker
     local marker = WarningMarker(self.area, x, y, function(area, mx, my)
-        local metaball = Metaball(area,mx,my)
+        local metaball = Metaball(area, mx, my)
         area:add(metaball)
     end)
 
@@ -119,7 +126,5 @@ function Spawner:spawnMetaballWithWarning(maxEnemynumber)
     self.area:add(marker)
     return true
 end
-
-
 
 return Spawner

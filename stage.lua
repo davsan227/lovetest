@@ -108,27 +108,27 @@ function Stage:update(dt)
     -- ===================================
 
     -- Only start checking after the initial delay
-    if self.time_since_stage_start >= self.first_shooter_delay then
-        self.shooter_timer = self.shooter_timer + dt
+    -- if self.time_since_stage_start >= self.first_shooter_delay then
+    --     self.shooter_timer = self.shooter_timer + dt
 
-        -- Check if cooldown is ready
-        if self.shooter_timer >= self.shooter_cooldown and self.spawnShooters == true then
-            self.spawnShooters = true
-            -- Attempt to spawn. The Spawner checks the max limit.
-            local spawned = self.spawner:spawnShooterWithWarning(self.shooter_max)
+    --     -- Check if cooldown is ready
+    --     if self.shooter_timer >= self.shooter_cooldown and self.spawnShooters == true then
+    --         self.spawnShooters = true
+    --         -- Attempt to spawn. The Spawner checks the max limit.
+    --         local spawned = self.spawner:spawnShooterWithWarning(self.shooter_max)
 
-            -- If a shooter was successfully spawned (i.e., the limit wasn't reached), reset the timer.
-            if spawned then
-                self.shooter_timer = 0
-            end
-        end
-    end
+    --         -- If a shooter was successfully spawned (i.e., the limit wasn't reached), reset the timer.
+    --         if spawned then
+    --             self.shooter_timer = 0
+    --         end
+    --     end
+    -- end
 
     -- 1 metaball joins
-    if  self.shooter_death_count >= 4 then
+    -- if  self.shooter_death_count >= 4 then
         self.spawnShooters = false
-    --     self.spawner:spawnMetaballWithWarning(1)
-    end
+        self.spawner:spawnMetaballWithWarning(1, true)
+    -- end
 
     -- ===================================
     -- === 2. Line Formation Spawning Logic ===
