@@ -149,7 +149,7 @@ function Player:explode(objects)
         if not obj.dead and obj ~= self then
             local dx, dy = obj.x - self.x, obj.y - self.y
             if math.sqrt(dx * dx + dy * dy) < 100 then
-                if obj.explode then
+               if obj.explode then
                     obj:explode(objects) -- pass the same list of objects
                 else
                     obj.dead = true

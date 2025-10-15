@@ -127,7 +127,10 @@ function Stage:update(dt)
     -- 1 metaball joins
     -- if  self.shooter_death_count >= 4 then
         self.spawnShooters = false
-        self.spawner:spawnMetaballWithWarning(1, true)
+        -- self.spawner:spawnMetaballWithWarning(1, true)
+
+        self.spawner:spawnSpreadShooterWithWarning(1, true)
+
     -- end
 
     -- ===================================
