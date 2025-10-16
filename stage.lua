@@ -19,9 +19,9 @@ function Stage:new(input)
     self.area:add(self.player_circle)
 
     -- slow-motion
-    self.slowmo_timer = 0
-    self.slowmo_duration = 1.5
-    self.slowmo_factor = 0.3
+    -- self.slowmo_timer = 0
+    -- self.slowmo_duration = 1.5
+    -- self.slowmo_factor = 0.3
 
     -- spawn enemies
     self.spawn_timer = 0
@@ -51,10 +51,10 @@ end
 
 function Stage:update(dt)
     local effective_dt = dt
-    if self.slowmo_timer > 0 then
-        effective_dt = dt * self.slowmo_factor
-        self.slowmo_timer = math.max(0, self.slowmo_timer - dt)
-    end
+    -- if self.slowmo_timer > 0 then
+    --     effective_dt = dt * self.slowmo_factor
+    --     self.slowmo_timer = math.max(0, self.slowmo_timer - dt)
+    -- end
 
     if self.game_over then
         return

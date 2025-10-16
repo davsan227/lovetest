@@ -77,9 +77,9 @@ function love.update(dt)
     if input:pressed("explode") then
         -- Trigger explosion during gameplay
         local exploded_now = stage.player_circle:explode(stage.area.game_objects)
-        if exploded_now then
-            stage.slowmo_timer = stage.slowmo_duration
-        end
+        -- if exploded_now then
+        --     stage.slowmo_timer = stage.slowmo_duration
+        -- end
     end
 end
 
