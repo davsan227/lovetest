@@ -5,7 +5,7 @@ local Timer = require "libs.hump.timer"
 
 local SpreadShooter = Enemy:extend()
 
-function SpreadShooter:new(area, x, y)
+function SpreadShooter:new(area, x, y, bulletPattern)
     SpreadShooter.super.new(self, area, x, y)
     
     -- Shooting
@@ -16,7 +16,7 @@ function SpreadShooter:new(area, x, y)
     -- Identification
     self.isSpreadShooter = true
     self.score_value = 500
-    self.chainThreshold = 2
+    self.chainThreshold = 8
     self.custom_color = {0, 0, 2}
     
     -- Lives system
@@ -25,7 +25,7 @@ function SpreadShooter:new(area, x, y)
     
     -- internal flags
     self._counted_dead = false
-    self.currentShoot = "spread" -- start pattern
+    self.bulletPattern =  bulletPattern or "spread" 
 end
 
 function SpreadShooter:update(dt)
@@ -45,11 +45,11 @@ end
 
 -- choose shooting pattern based on currentShoot
 function SpreadShooter:shootPattern()
-    if self.currentShoot == "spread" then
+    if self.bulletPattern == "spread" then
         self:shoot_spread(30)
-    elseif self.currentShoot == "storm" then
+    elseif self.bulletPattern == "storm" then
         self:shoot_bullet_storm(40)
-    elseif self.currentShoot == "hell" then
+    elseif self.bulletPattern == "hell" then
         self:shoot_bullet_hell(60)
     end
 end
@@ -94,42 +94,14 @@ function SpreadShooter:shoot_bullet_hell(numBullets)
     end
 end
 
--- change shooting pattern based on lives
-function SpreadShooter:updatePattern()
-    if self.lives == 3 then
-        self.currentShoot = "spread"
-    elseif self.lives == 2 then
-        self.currentShoot = "storm"
-    elseif self.lives == 1 then
-        self.currentShoot = "hell"
-    end
-end
-
--- called when hit by player
-function SpreadShooter:hit(z)
-    if self.dead then return end
-
-    self.lives = self.lives - 1
-    print("SpreadShooter hit! Lives left: " .. self.lives)
-
-    if self.lives <= 0 then
-        -- mark dead before calling explode to prevent recursion
-        self.dead = true
-        self:explode(self.chainThreshold)
-    else
-        self:updatePattern()
-    end
-end
-
 
 -- explosion override
-function SpreadShooter:explode(chainThreshold)
-    -- only explode if dead (lives <= 0)
-    if not self.dead then
-        return
+function SpreadShooter:explode()
+    Enemy.explode(self, self.chainThreshold)
+    -- optionally count death immediately if explode guarantees dead
+    if self.dead then
+        self:countDead()
     end
-    Enemy.explode(self, chainThreshold)
-    self:countDead()
 end
 
 -- counting deaths

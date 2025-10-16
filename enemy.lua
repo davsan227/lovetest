@@ -58,52 +58,60 @@ end
 
 -- Explosion with chain reaction threshold
 -- chainThreshold: minimum number of simultaneous nearby explosions required to trigger
+
 function Enemy:explode(chainThreshold)
-    chainThreshold = chainThreshold or 1
-    if self.exploding then
-        return
-    end
-
-    -- Count nearby exploding objects
-    local nearbyExplosions = 0
-    for _, obj in ipairs(self.area.game_objects) do
-        if obj ~= self and obj.exploding then
-            local dx, dy = obj.x - self.x, obj.y - self.y
-            local dist = math.sqrt(dx * dx + dy * dy)
-            if dist < 100 then
-                nearbyExplosions = nearbyExplosions + 1
-            end
-        end
-    end
-
     chainThreshold = tonumber(chainThreshold) or 1
-    if nearbyExplosions < chainThreshold then
+    if self.dead or self.exploding then
         return
     end
 
-    -- Trigger explosion
-    self.exploding = true
-    self.explosion_timer = 0
-    self.explosion_radius = self.radius
+    -- Initialize chain tracking
+    self.area.currentExplosionChain = self.area.currentExplosionChain or {
+        id = love.timer.getTime(),
+        pending = {},
+        processing = false
+    }
 
-    -- add score
-    if self.area.stage then
-        -- This should be the only place the score is added!
-        
-        -- Default score
-        local score_to_add = 10 
-        
-        -- Check if it's a shooter to add the bonus
-        if self.isShooter then
-            score_to_add = score_to_add + 1800
-        end
+    local chain = self.area.currentExplosionChain
 
-        self.area.stage.score = self.area.stage.score + score_to_add
+    -- Mark as pending for this chain
+    if not chain.pending[self] then
+        chain.pending[self] = true
     end
 
-    -- delayed chain reaction for others
+    -- Only schedule processing once per chain
+    if not chain.processing then
+        chain.processing = true
+        self.area.stage.timer:after(0.2, function()
+            local total = 0
+            for _ in pairs(chain.pending) do
+                total = total + 1
+
+            end
+            print("Chain pending count: " .. total)
+            if total >= chainThreshold then
+                -- Trigger all pending explosions
+                for e, _ in pairs(chain.pending) do
+                    e.exploding = true
+                    e.explosion_timer = 0
+                    e.explosion_radius = e.radius
+                    e.dead = false
+                    -- Score
+                    if self.area.stage then
+                        local score = e.isShooter and 1800 or 10
+                        self.area.stage.score = self.area.stage.score + score
+                    end
+                end
+            end
+
+            -- Reset chain
+            self.area.currentExplosionChain = nil
+        end)
+    end
+
+    -- propagate to nearby enemies
     for _, obj in ipairs(self.area.game_objects) do
-        if not obj.dead and obj ~= self and obj ~= self.area.stage.player_circle then
+        if obj ~= self and not obj.dead and not obj.exploding and obj ~= self.area.stage.player_circle then
             local dx, dy = obj.x - self.x, obj.y - self.y
             local dist = math.sqrt(dx * dx + dy * dy)
             if dist < 100 then
@@ -146,7 +154,7 @@ function Enemy:draw()
     else
         -- Default fixed color for generic enemies (REPLACES THE DARKNESS CODE)
         -- Example: A simple, fixed red color
-        love.graphics.setColor(1, 0.3, 0.3, 1) 
+        love.graphics.setColor(1, 0.3, 0.3, 1)
     end
 
     love.graphics.circle("fill", self.x, self.y, self.radius)

@@ -128,7 +128,7 @@ function Spawner:spawnMetaballWithWarning(maxEnemynumber, spawnMetaballWithWarni
 end
 
 -- Spawn a SpreadShooter: Checks max limit and returns true if a shooter was added.
-function Spawner:spawnSpreadShooterWithWarning(maxEnemynumber, spawnSpreadShooterMCenter)
+function Spawner:spawnSpreadShooterWithWarning(maxEnemynumber, spawnSpreadShooterMCenter, bulletPattern)
     local w, h = love.graphics.getDimensions()
     maxEnemynumber = maxEnemynumber or 1
 
@@ -167,7 +167,7 @@ function Spawner:spawnSpreadShooterWithWarning(maxEnemynumber, spawnSpreadShoote
 
     -- Create the warning marker
     local marker = WarningMarker(self.area, x, y, function(area, mx, my)
-        local spreadShooter = SpreadShooterEnemy(area, mx, my)
+        local spreadShooter = SpreadShooterEnemy(area, mx, my, bulletPattern)
         area:add(spreadShooter)
     end)
 

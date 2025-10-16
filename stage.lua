@@ -45,6 +45,7 @@ function Stage:new(input)
     self.first_shooter_delay = 5 -- Delay before first shooter can spawn
     self.first_shooter_spawned = false -- Flag to handle the initial delay
     self.shooter_death_count = 0
+    self.spreadshooter_dead_count = 0
     self.spawnShooters = true
 end
 
@@ -126,10 +127,14 @@ function Stage:update(dt)
 
     -- 1 metaball joins
     -- if  self.shooter_death_count >= 4 then
-        self.spawnShooters = false
-        -- self.spawner:spawnMetaballWithWarning(1, true)
+    self.spawnShooters = false
+    -- self.spawner:spawnMetaballWithWarning(1, true)
+    local patterns = {"spread", "storm", "hell"}
+    local pattern = patterns[self.spreadshooter_dead_count + 1] -- +1 because Lua arrays start at 1
 
-        self.spawner:spawnSpreadShooterWithWarning(1, true)
+    if pattern then
+        self.spawner:spawnSpreadShooterWithWarning(1, true, pattern)
+    end
 
     -- end
 
