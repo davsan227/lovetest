@@ -59,67 +59,61 @@ end
 
 -- Explosion with chain reaction threshold
 -- chainThreshold: minimum number of simultaneous nearby explosions required to trigger
-function Enemy:explode(chainThreshold)
-    chainThreshold = tonumber(chainThreshold) or 0
-    print("explode called with chainThreshold: " .. tostring(chainThreshold))
-    if self.exploding then
-        -- self.area.stage.total_explotions_triggered = self.area.stage.total_explotions_triggered + 1
-        -- print("first reaction! Object at (" .. self.x .. ", " .. self.y .. ") exploded.")
-        -- print("total_explotions_triggered " .. tostring(self.area.stage.total_explotions_triggered))
-        return
-    end
+function Enemy:explode(chain)
 
-    if self.area.stage.total_explotions_triggered < chainThreshold then
-        print("Chain reaction threshold not met for object at (" .. self.x .. ", " .. self.y .. "). Required: " ..
-                  chainThreshold .. ", Current: " .. tostring(self.area.stage.total_explotions_triggered))
-        return
-    end
+   -- chain = { count, pending, pending_lookup }
+    if self.exploding or self.exploded then return end
 
-    -- Trigger explosion
-    self.exploding = true
-    self.explosion_timer = 0
-    self.explosion_radius = self.radius
-
-    -- add score
-    if self.area.stage then
-        -- Default score
-        local score_to_add = 10
-        -- Check if it's a shooter to add the bonus
-        if self.isShooter then
-            score_to_add = score_to_add + 1800
+    -- If no chain was provided, explode immediately (fallback for isolated explosions)
+    if not chain then
+        self.exploding = true
+        self.exploded = true
+        self.explosion_timer = 0
+        self.explosion_radius = self.radius
+        if self.area and self.area.stage then
+            local score = (self.isShooter and 1800 or 10)
+            self.area.stage.score = self.area.stage.score + score
         end
-        self.area.stage.score = self.area.stage.score + score_to_add
+        return
     end
 
-    -- delayed chain reaction for others
+    -- Mark as exploded so it won't trigger again
+    self.exploding = true
+    self.exploded = true
+
+    -- Increment chain count (this explosion increases the global count)
+    chain.count = chain.count + 1
+
+    if self.area and self.area.stage then
+    local score = (self.isShooter and 1800 or 10)
+        self.area.stage.score = self.area.stage.score + score
+    end
+
+    -- Schedule all nearby enemies to be considered later (for chain spread timing)
     for _, obj in ipairs(self.area.game_objects) do
-        if not obj.dead and obj ~= self and obj ~= self.area.stage.player_circle then
+        if obj ~= self and obj ~= self.area.stage.player_circle and not obj.dead and obj.explode then
             local dx, dy = obj.x - self.x, obj.y - self.y
             local dist = math.sqrt(dx * dx + dy * dy)
             if dist < 100 then
-                -- prevent scheduling the same object multiple times
-                if not obj.exploding and not obj.exploded then
-                    if self.area.stage.total_explotions_triggered > chainThreshold then
-                    obj.exploded = true
-                    end
+                if not chain.pending_lookup[obj] then
+                    chain.pending_lookup[obj] = true
                     local delay = dist / 250
                     self.area.stage.timer:after(delay, function()
-                        if obj.explode then
-                            obj:explode(chainThreshold) -- chain reaction from this explosion only
-                            if self.area.stage.total_explotions_triggered == 0 then
-                                self.area.stage.total_explotions_triggered = 1
-                            end
-                            self.area.stage.total_explotions_triggered = self.area.stage.total_explotions_triggered + 1
-                            print("Chain reaction! Object at (" .. obj.x .. ", " .. obj.y .. ") exploded.")
-                            print("total_explotions_triggered " .. tostring(self.area.stage.total_explotions_triggered))
-
-                        else
-                            obj.dead = true
+                        if not obj.exploded and not obj.dead and not chain.halted then
+                            table.insert(chain.pending, obj)
+                        end
+                        if self.area and self.area.processPending then
+                            self.area:processPending(chain)
                         end
                     end)
                 end
             end
         end
+    end
+
+    -- Immediately check for any pending that may now qualify
+    if self.area and self.area.processPending then
+        self.area:processPending(chain)
     end
 end
 

@@ -19,10 +19,6 @@ function SpreadShooter:new(area, x, y, bulletPattern)
     self.chainThreshold = 8
     self.custom_color = {0, 0, 2}
     
-    -- Lives system
-    self.maxLives = 3
-    self.lives = self.maxLives
-    
     -- internal flags
     self._counted_dead = false
     self.bulletPattern =  bulletPattern or "spread" 
@@ -95,20 +91,19 @@ function SpreadShooter:shoot_bullet_hell(numBullets)
 end
 
 
--- explosion override
-function SpreadShooter:explode()
-    Enemy.explode(self, self.chainThreshold)
-    -- optionally count death immediately if explode guarantees dead
-    if self.dead then
-        self:countDead()
-    end
-end
+-- -- explosion override
+-- function SpreadShooter:explode()
+--     Enemy.explode(self)
+--     -- optionally count death immediately if explode guarantees dead
+--     if self.dead then
+--         self:countDead()
+--     end
+-- end
 
 -- counting deaths
 function SpreadShooter:countDead()
-    if self._counted_dead then return end
-    self._counted_dead = true
-    if self.area and self.area.stage then
+    if self.dead and not self._counted_dead and self.area and self.area.stage then
+        self._counted_dead = true
         self.area.stage.spreadshooter_dead_count = (self.area.stage.spreadshooter_dead_count or 0) + 1
         print("SpreadShooter destroyed! Total: " .. self.area.stage.spreadshooter_dead_count)
     end

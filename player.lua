@@ -131,28 +131,37 @@ function Player:explode(objects)
     -- subtract 1 explosion
     self.area.stage.explosions = self.area.stage.explosions - 1
 
-    -- start explosion
-    self.exploded = true
-    self.explode_timer = 0
+     -- Mark as exploded (visual effect)
     self.exploding = true
+    self.exploded = true
     self.explosion_timer = 0
     self.explosion_radius = self.radius
 
-    -- chain reaction
-    for _, obj in ipairs(objects) do
-        if not obj.dead and obj ~= self then
+    -- Create a new chain object (shared by all explosions in this sequence)
+    local chain = {
+        count = 0,               -- total explosions triggered so far in this chain
+        pending = {},            -- objects waiting for threshold
+        pending_lookup = {},    -- avoids duplicates
+        halted = false           --halts the chain if treshold not satisfied   
+    }
+
+    -- Trigger all enemies initially within range
+    for _, obj in ipairs(self.area.game_objects) do
+        if obj ~= self and not obj.dead and obj.explode then
             local dx, dy = obj.x - self.x, obj.y - self.y
-            if math.sqrt(dx * dx + dy * dy) < 100 then
-               if obj.explode then
-                    obj:explode(objects) -- pass the same list of objects
-                else
-                    obj.dead = true
-                end
+            local dist = math.sqrt(dx * dx + dy * dy)
+            if dist < 100  and not obj.chainThreshold then
+                obj:explode(chain)
             end
         end
     end
 
-    return true
+    -- Process pending objects in case some thresholds are already met
+    if self.area and self.area.processPending then
+        self.area:processPending(chain)
+    end
+
+    print("Player explosion triggered chain of " .. chain.count .. " explosions")
 end
 
 -- called when player collides with an enemy

@@ -21,6 +21,43 @@ function Area:update(dt)
     end
 end
 
+-- Handles pending chain explosions
+function Area:processPending(chain)
+    if not chain then return end
+    local changed = true
+
+    while changed do
+        changed = false
+        local i = 1
+        while i <= #chain.pending do
+            local obj = chain.pending[i]
+
+            -- Clean up invalid objects
+            if not obj or obj.dead or obj.exploded then
+                table.remove(chain.pending, i)
+
+            else
+                print("isSpreadShooter;", obj.isSpreadShooter)
+                print(obj.chainThreshold)
+                local threshold = obj.chainThreshold or 1
+                -- ✅ Check against total chain explosions (not nearby!)
+                print("Checking pending object against threshold: " .. tostring(chain.count) .. " / " .. tostring(threshold))
+                if chain.count >= threshold then
+                    table.remove(chain.pending, i)
+                    chain.pending_lookup[obj] = nil
+                    obj:explode(chain)  -- will increment chain.count
+                    changed = true
+                else
+                    print("Pending object did not meet threshold: " .. tostring(chain.count) .. " / " .. tostring(threshold))
+                    chain.halted = true
+                    return
+                end
+            end
+        end
+    end
+end
+
+
 function Area:draw()
     for i, obj in ipairs(self.game_objects) do
         if obj and type(obj.draw) == "function" then
