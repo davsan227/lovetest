@@ -47,6 +47,8 @@ function Stage:new(input)
     self.shooter_death_count = 0
     self.spreadshooter_dead_count = 0
     self.spawnShooters = true
+
+    self.total_explotions_triggered = 0
 end
 
 function Stage:update(dt)

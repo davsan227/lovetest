@@ -19,6 +19,7 @@ function Enemy:new(area, x, y)
 
     -- explosion
     self.exploding = false
+    self.exploded = false
     self.explosion_radius = 0
     self.explosion_duration = 0.3
     self.explosion_timer = 0
@@ -59,25 +60,18 @@ end
 -- Explosion with chain reaction threshold
 -- chainThreshold: minimum number of simultaneous nearby explosions required to trigger
 function Enemy:explode(chainThreshold)
-    chainThreshold = chainThreshold or 1
+    chainThreshold = tonumber(chainThreshold) or 0
+    print("explode called with chainThreshold: " .. tostring(chainThreshold))
     if self.exploding then
+        -- self.area.stage.total_explotions_triggered = self.area.stage.total_explotions_triggered + 1
+        -- print("first reaction! Object at (" .. self.x .. ", " .. self.y .. ") exploded.")
+        -- print("total_explotions_triggered " .. tostring(self.area.stage.total_explotions_triggered))
         return
     end
 
-    -- Count nearby exploding objects
-    local nearbyExplosions = 0
-    for _, obj in ipairs(self.area.game_objects) do
-        if obj ~= self and obj.exploding then
-            local dx, dy = obj.x - self.x, obj.y - self.y
-            local dist = math.sqrt(dx * dx + dy * dy)
-            if dist < 100 then
-                nearbyExplosions = nearbyExplosions + 1
-            end
-        end
-    end
-
-    chainThreshold = tonumber(chainThreshold) or 1
-    if nearbyExplosions < chainThreshold then
+    if self.area.stage.total_explotions_triggered < chainThreshold then
+        print("Chain reaction threshold not met for object at (" .. self.x .. ", " .. self.y .. "). Required: " ..
+                  chainThreshold .. ", Current: " .. tostring(self.area.stage.total_explotions_triggered))
         return
     end
 
@@ -88,16 +82,12 @@ function Enemy:explode(chainThreshold)
 
     -- add score
     if self.area.stage then
-        -- This should be the only place the score is added!
-        
         -- Default score
-        local score_to_add = 10 
-        
+        local score_to_add = 10
         -- Check if it's a shooter to add the bonus
         if self.isShooter then
             score_to_add = score_to_add + 1800
         end
-
         self.area.stage.score = self.area.stage.score + score_to_add
     end
 
@@ -107,14 +97,27 @@ function Enemy:explode(chainThreshold)
             local dx, dy = obj.x - self.x, obj.y - self.y
             local dist = math.sqrt(dx * dx + dy * dy)
             if dist < 100 then
-                local delay = dist / 250
-                self.area.stage.timer:after(delay, function()
-                    if obj.explode then
-                        obj:explode(chainThreshold)
-                    else
-                        obj.dead = true
+                -- prevent scheduling the same object multiple times
+                if not obj.exploding and not obj.exploded then
+                    if self.area.stage.total_explotions_triggered > chainThreshold then
+                    obj.exploded = true
                     end
-                end)
+                    local delay = dist / 250
+                    self.area.stage.timer:after(delay, function()
+                        if obj.explode then
+                            obj:explode(chainThreshold) -- chain reaction from this explosion only
+                            if self.area.stage.total_explotions_triggered == 0 then
+                                self.area.stage.total_explotions_triggered = 1
+                            end
+                            self.area.stage.total_explotions_triggered = self.area.stage.total_explotions_triggered + 1
+                            print("Chain reaction! Object at (" .. obj.x .. ", " .. obj.y .. ") exploded.")
+                            print("total_explotions_triggered " .. tostring(self.area.stage.total_explotions_triggered))
+
+                        else
+                            obj.dead = true
+                        end
+                    end)
+                end
             end
         end
     end
@@ -146,7 +149,7 @@ function Enemy:draw()
     else
         -- Default fixed color for generic enemies (REPLACES THE DARKNESS CODE)
         -- Example: A simple, fixed red color
-        love.graphics.setColor(1, 0.3, 0.3, 1) 
+        love.graphics.setColor(1, 0.3, 0.3, 1)
     end
 
     love.graphics.circle("fill", self.x, self.y, self.radius)

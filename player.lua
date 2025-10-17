@@ -3,6 +3,7 @@ local Classic = require "libs.classic"
     local HC = require "libs.HC"
 
 
+
 local Player = Classic:extend()
 
 function Player:new(area, x, y, input)
@@ -51,8 +52,9 @@ function Player:update(dt)
 
     -- 2. Explosion / exploded
     if self.exploded then
+         
         self.explode_timer = self.explode_timer + dt
-        if self.explode_timer >= 3 then
+        if self.explode_timer >= 5 then
             self.exploded, self.explode_timer = false, 0
         end
     end
@@ -123,16 +125,8 @@ end
 
 -- called when player triggers explosion manually
 function Player:explode(objects)
-    if self.exploding then
-        return
-    end -- prevent starting another explosion during active explosion
-    if self.exploded then
-        return
-    end -- already exploded (cooldown)
-
-    if self.area.stage.explosions <= 0 then
-        return
-    end
+    if self.exploding or self.exploded then return end
+    if self.area.stage.explosions <= 0 then return end
 
     -- subtract 1 explosion
     self.area.stage.explosions = self.area.stage.explosions - 1
