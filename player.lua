@@ -146,7 +146,7 @@ function Player:explode()
 
     -- ✅ store the chain in the stage so you can draw it later
     if self.area and self.area.stage then
-        self.area.stage.current_chain = tonumber(chain.count)
+        self.area.stage.current_chain = chain
     end
 
     -- Trigger all enemies initially within range

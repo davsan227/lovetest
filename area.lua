@@ -50,6 +50,7 @@ function Area:processPending(chain)
                 else
                     print("Pending object did not meet threshold: " .. tostring(chain.count) .. " / " .. tostring(threshold))
                     chain.halted = true
+                    self.stage.treshold_required = threshold
                     return
                 end
             end
