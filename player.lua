@@ -1,8 +1,6 @@
 -- player.lua
 local Classic = require "libs.classic"
-    local HC = require "libs.HC"
-
-
+local HC = require "libs.HC"
 
 local Player = Classic:extend()
 
@@ -10,10 +8,9 @@ function Player:new(area, x, y, input)
     self.area = area
     self.x, self.y = x, y
     self.radius = 15
-    self.hitbox_radius = self.radius * 0.50
+    self.hitbox_radius = self.radius * 0.25
     self.shape = HC.circle(self.x, self.y, self.hitbox_radius or self.radius)
     self.dead = false
-    
 
     self.input = input
     self.speed = 200
@@ -41,7 +38,6 @@ function Player:delayLifeExtraction(delay)
     self.hit_delay = delay or 0.15 -- <--- initialized here
 end
 
-
 function Player:update(dt)
     if self.area.stage.game_over then
         return
@@ -52,7 +48,7 @@ function Player:update(dt)
 
     -- 2. Explosion / exploded
     if self.exploded then
-         
+
         self.explode_timer = self.explode_timer + dt
         if self.explode_timer >= 5 then
             self.exploded, self.explode_timer = false, 0
@@ -100,7 +96,6 @@ function Player:update(dt)
     end
 end
 
-
 function Player:move(dt)
     local dx, dy = 0, 0
     if self.input:down("left_key") then
@@ -124,14 +119,18 @@ function Player:move(dt)
 end
 
 -- called when player triggers explosion manually
-function Player:explode(objects)
-    if self.exploding or self.exploded then return end
-    if self.area.stage.explosions <= 0 then return end
+function Player:explode()
+    if self.exploding or self.exploded then
+        return
+    end
+    if self.area.stage.explosions <= 0 then
+        return
+    end
 
     -- subtract 1 explosion
     self.area.stage.explosions = self.area.stage.explosions - 1
 
-     -- Mark as exploded (visual effect)
+    -- Mark as exploded (visual effect)
     self.exploding = true
     self.exploded = true
     self.explosion_timer = 0
@@ -139,19 +138,28 @@ function Player:explode(objects)
 
     -- Create a new chain object (shared by all explosions in this sequence)
     local chain = {
-        count = 0,               -- total explosions triggered so far in this chain
-        pending = {},            -- objects waiting for threshold
-        pending_lookup = {},    -- avoids duplicates
-        halted = false           --halts the chain if treshold not satisfied   
+        count = 0, -- total explosions triggered so far in this chain
+        pending = {}, -- objects waiting for threshold
+        pending_lookup = {}, -- avoids duplicates
+        halted = false -- halts the chain if treshold not satisfied   
     }
+
+    -- ✅ store the chain in the stage so you can draw it later
+    if self.area and self.area.stage then
+        self.area.stage.current_chain = tonumber(chain.count)
+    end
 
     -- Trigger all enemies initially within range
     for _, obj in ipairs(self.area.game_objects) do
         if obj ~= self and not obj.dead and obj.explode then
             local dx, dy = obj.x - self.x, obj.y - self.y
             local dist = math.sqrt(dx * dx + dy * dy)
-            if dist < 100  and not obj.chainThreshold then
+            if dist < 100 and not obj.chainThreshold then
                 obj:explode(chain)
+                if (obj.chainThreshold) then
+                    print("Initial explosion triggered pending object with threshold " .. tostring(obj.chainThreshold))
+                    chain.halted = true
+                end
             end
         end
     end
@@ -171,9 +179,8 @@ function Player:hit()
     end
 
     -- Queue a delayed hit instead of applying it immediately
-    self:delayLifeExtraction()  -- wait 0.3 seconds before applying life/explosion deduction
+    self:delayLifeExtraction() -- wait 0.3 seconds before applying life/explosion deduction
 end
-
 
 function Player:draw()
     -- draw explosion if exploding

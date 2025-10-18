@@ -42,11 +42,11 @@ end
 -- choose shooting pattern based on currentShoot
 function SpreadShooter:shootPattern()
     if self.bulletPattern == "spread" then
-        self:shoot_spread(30)
+        self:shoot_spread(20)
     elseif self.bulletPattern == "storm" then
         self:shoot_bullet_storm(40)
     elseif self.bulletPattern == "hell" then
-        self:shoot_bullet_hell(60)
+        self:shoot_bullet_hell(30)
     end
 end
 

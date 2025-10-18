@@ -48,7 +48,7 @@ function Stage:new(input)
     self.spreadshooter_dead_count = 0
     self.spawnShooters = true
 
-    self.total_explotions_triggered = 0
+    self.current_chain = 0
 end
 
 function Stage:update(dt)
@@ -160,6 +160,7 @@ function Stage:draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("Score: " .. self.score, 10, 10)
     love.graphics.print("Ships: " .. self.explosions, 10, 30)
+    love.graphics.print("Chain: " .. self.current_chain, 10, 50)
 
     self.area:draw()
 
