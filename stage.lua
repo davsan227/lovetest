@@ -25,7 +25,7 @@ function Stage:new(input)
 
     -- spawn enemies
     self.spawn_timer = 0
-    self.spawn_interval = 1.25 -- Timer for line formations
+    self.spawn_interval = 0.75 -- Timer for line formations
     self.enemy_speed_min = 50
     self.enemy_speed_max = 70
     self.difficulty_timer = 0
@@ -149,9 +149,12 @@ function Stage:update(dt)
     if self.spawn_timer >= self.spawn_interval then
         self.spawn_timer = self.spawn_timer - self.spawn_interval
 
-        -- Spawn a line formation targeting the player
-        self.spawner:spawnLineFormation(self.player_circle.x, self.player_circle.y, 50, self.enemy_speed_min,
-            self.enemy_speed_max)
+        -- -- Spawn a line formation targeting the player
+        -- self.spawner:spawnLineFormation(self.player_circle.x, self.player_circle.y, 50, self.enemy_speed_min,
+        --     self.enemy_speed_max)
+
+        --spawn a formation
+        self.spawner:spawnLineFormation(self.enemy_speed_min, self.enemy_speed_max)
     end
 
 end

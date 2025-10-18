@@ -7,14 +7,14 @@ function Formations:new(area)
     self.area = area
 end
 
-function Formations:line(count, startX, startY, targetX, targetY, spacing, speedMin, speedMax)
+function Formations:line(count, startX, startY,angle,  spacing, speedMin, speedMax)
     count = math.max(2, count)
    
     
     spacing = spacing or 100
     if spacing < 1 then spacing = 100 end
 
-    local angle = math.atan2(targetY - startY, targetX - startX)
+    -- local angle = math.atan2(targetY - startY, targetX - startX)
     local perpAngle = angle + math.pi / 2
     local speed = love.math.random(speedMin, speedMax) -- shared speed
 

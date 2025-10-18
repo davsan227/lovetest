@@ -15,22 +15,33 @@ function Spawner:new(area)
 end
 
 -- Spawn a line formation
-function Spawner:spawnLineFormation(targetX, targetY, speedMin, speedMax)
+function Spawner:spawnLineFormation(speedMin, speedMax)
     local w, h = love.graphics.getDimensions()
     local edge = love.math.random(1, 4)
-    local x, y
+    local x, y, angle
+    local margin = 40 -- how far outside screen they start
+
     if edge == 1 then
-        x, y = math.random(0, w), -20
+        -- From top → downward
+        x, y = love.math.random(0, w), -margin
+        angle = math.pi / 2
     elseif edge == 2 then
-        x, y = math.random(0, w), h + 20
+        -- From bottom → upward
+        x, y = love.math.random(0, w), h + margin
+        angle = -math.pi / 2
     elseif edge == 3 then
-        x, y = -20, math.random(0, h)
+        -- From left → right
+        x, y = -margin, love.math.random(0, h)
+        angle = 0
     else
-        x, y = w + 20, math.random(0, h)
+        -- From right → left
+        x, y = w + margin, love.math.random(0, h)
+        angle = math.pi
     end
 
     local count = math.max(2, love.math.random(2, 3))
-    self.formations:line(count, x, y, targetX, targetY, 50, speedMin, speedMax)
+    local spacing = 50
+    self.formations:line(count, x, y, angle, spacing, speedMin, speedMax)
 end
 
 -- Spawn a shooter: Checks max limit and returns true if a shooter was added.

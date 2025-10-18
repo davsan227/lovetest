@@ -26,6 +26,8 @@ function love.load()
     input:bind("w", "up_key")
     input:bind("s", "down_key")
     input:bind("mouse1", "explode")
+    input:bind("mouse2", "dash")
+
 
     -- Initialize stage
     stage = Stage(input)
